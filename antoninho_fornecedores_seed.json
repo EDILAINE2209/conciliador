@@ -1,0 +1,470 @@
+{
+ "13": {
+  "conta": "715",
+  "nome": "BRF S.A."
+ },
+ "14": {
+  "conta": "714",
+  "nome": "ADALBERTO TORTORELLI JUNIOR"
+ },
+ "15": {
+  "conta": "713",
+  "nome": "EBEG EMBALAGENS E DESCARTAVEIS EIRELI"
+ },
+ "18": {
+  "conta": "710",
+  "nome": "P. SEVERINI NETTO COMERCIAL LTDA"
+ },
+ "19": {
+  "conta": "709",
+  "nome": "ADM DO BRASIL LTDA"
+ },
+ "21": {
+  "conta": "707",
+  "nome": "AMAFIL INDUSTRIA E COMERCIO DE ALIMENTOS LTDA"
+ },
+ "23": {
+  "conta": "705",
+  "nome": "PALITUS SORVETES LTDA"
+ },
+ "26": {
+  "conta": "702",
+  "nome": "AVIVAR ALIMENTOS S/A"
+ },
+ "28": {
+  "conta": "700",
+  "nome": "OKUMA IMP.EXP.DE FRUTAS LTDA"
+ },
+ "29": {
+  "conta": "699",
+  "nome": "PAULO J. DAHER E CIA LTDA"
+ },
+ "30": {
+  "conta": "698",
+  "nome": "COMERCIAL CAMELOTTI DE PRODUTOS AGRICOLA"
+ },
+ "31": {
+  "conta": "697",
+  "nome": "PEDROSO COMERCIO, DISTRIBUICAO & TRANSPORTES LTDA"
+ },
+ "35": {
+  "conta": "693",
+  "nome": "R.J.R. COMERCIO LTDA"
+ },
+ "37": {
+  "conta": "691",
+  "nome": "TREVO LACTEOS S.A."
+ },
+ "42": {
+  "conta": "686",
+  "nome": "PLAYVENDER DISTRIBUIDORA DO BRASIL S/A"
+ },
+ "48": {
+  "conta": "680",
+  "nome": "MARLENE DE SOUZA LOPES CPF:954.048.056-68"
+ },
+ "49": {
+  "conta": "679",
+  "nome": "SILVEIRA E PADUA DISTRIBUIDORA DE PRODUTOS ALIMENTICIOS LTDA"
+ },
+ "52": {
+  "conta": "676",
+  "nome": "COMERCIO E INDUSTRIA DE CAFE PALMARES LTDA"
+ },
+ "54": {
+  "conta": "674",
+  "nome": "DISTRIBUIDORA SUL MINAS P.A LTDA"
+ },
+ "56": {
+  "conta": "672",
+  "nome": "DECMINAS DISTRIBUICAO E LOGISTICA S.A."
+ },
+ "57": {
+  "conta": "671",
+  "nome": "AGROINDUSTRIA E COMERCIO DE CEREAIS TRES IRMAOS LTDA."
+ },
+ "60": {
+  "conta": "668",
+  "nome": "VALE D'OURO IMPORTACAO & EXPORTACAO S/A"
+ },
+ "62": {
+  "conta": "666",
+  "nome": "LOGICA DISTRIBUICAO E COMERCIO DE PRODUTOS ALIMENTICIOS EIRELI"
+ },
+ "64": {
+  "conta": "664",
+  "nome": "CEREALISTA FELGRAN LTDA."
+ },
+ "65": {
+  "conta": "663",
+  "nome": "COMERCIAL BENAVIDES CAMPINAS LTDA"
+ },
+ "67": {
+  "conta": "661",
+  "nome": "REVAL ATACADO DE PAPELARIA LTDA"
+ },
+ "74": {
+  "conta": "654",
+  "nome": "INDUSTRIA DE REFRIGERANTES PEQUETITO LTDA"
+ },
+ "78": {
+  "conta": "650",
+  "nome": "COMERCIAL AZEVEDO LTDA"
+ },
+ "80": {
+  "conta": "648",
+  "nome": "NIVALDO APARECIDO SILVA"
+ },
+ "81": {
+  "conta": "606",
+  "nome": "DISTRIBUIDORA DE PRODUTOS ALIMENTICIOS PAZOTTI LTDA"
+ },
+ "82": {
+  "conta": "646",
+  "nome": "BOLONHA ALIMENTOS POCOS DE CALDAS LTDA"
+ },
+ "86": {
+  "conta": "642",
+  "nome": "NUTRILI - INDUSTRIA E COMERCIO DE CARNES LTDA"
+ },
+ "88": {
+  "conta": "640",
+  "nome": "BRUNORIO E FILHO LTDA"
+ },
+ "89": {
+  "conta": "639",
+  "nome": "DF DISTRIBUIDORA LTDA"
+ },
+ "92": {
+  "conta": "636",
+  "nome": "GONCALVES SALLES S A INDUSTRIA E COMERCIO"
+ },
+ "95": {
+  "conta": "633",
+  "nome": "LACTOWAL LATICINIOS LTDA EPP"
+ },
+ "96": {
+  "conta": "632",
+  "nome": "MONTEMAQ MONTE SANTO MAQ AGRICOLAS LTDA."
+ },
+ "97": {
+  "conta": "631",
+  "nome": "PEPSICO DO BRASIL LTDA"
+ },
+ "98": {
+  "conta": "630",
+  "nome": "MC TEXTIL EIRELI"
+ },
+ "100": {
+  "conta": "628",
+  "nome": "DISTRIBUIDORA SUL MINEIRA DE ALIMEN"
+ },
+ "101": {
+  "conta": "627",
+  "nome": "ARCOS COMERCIO IMPORTACAO LTDA"
+ },
+ "109": {
+  "conta": "619",
+  "nome": "IVAN DONIZETI DO NASCIMENTO"
+ },
+ "111": {
+  "conta": "506",
+  "nome": "FN DESTRIBUIDORA LTDA"
+ },
+ "112": {
+  "conta": "616",
+  "nome": "MOCOCA SA PRODUTOS ALIMENTICIOS"
+ },
+ "113": {
+  "conta": "615",
+  "nome": "MAXFRIOS DISTRIBUIDORA E TRANSPORTE LTDA"
+ },
+ "117": {
+  "conta": "611",
+  "nome": "RIO DE JANEIRO REFRESCOS LTDA"
+ },
+ "118": {
+  "conta": "610",
+  "nome": "TECIDOS E ARMARINHOS MIGUEL BARTOLOMEU SA"
+ },
+ "120": {
+  "conta": "608",
+  "nome": "MINASBEB COMERCIO DE BEBIDAS LTDA"
+ },
+ "121": {
+  "conta": "607",
+  "nome": "COMERCIO DE FRUTAS  W MAGARIO  LTDA"
+ },
+ "122": {
+  "conta": "606",
+  "nome": "DISTRIBUIDORA DE PRODUTOS ALIMENTICIOS PAZOTTI LTDA"
+ },
+ "125": {
+  "conta": "603",
+  "nome": "CERGRAN DISTRIBUID ATAC DE PROD ALIM S A"
+ },
+ "127": {
+  "conta": "601",
+  "nome": "NESTLE BRASIL LTDA."
+ },
+ "128": {
+  "conta": "600",
+  "nome": "BARBOSA DISTRIBUICAO E COMERCIO EIRELI"
+ },
+ "129": {
+  "conta": "599",
+  "nome": "SUINCO - COOPERATIVA DE SUINOCULTORES LTDA"
+ },
+ "131": {
+  "conta": "597",
+  "nome": "TOZZI COMERCIO DE CARVAO LTDA"
+ },
+ "132": {
+  "conta": "596",
+  "nome": "EPOCA COMERCIO E DISTRIBUICAO DE PRODUTOS ALIMENTICIOS E INDUSTRIALIZADOS LTDA"
+ },
+ "133": {
+  "conta": "595",
+  "nome": "MARTINS COMERCIO E SERVICOS DE DISTRIBUICAO S/A"
+ },
+ "139": {
+  "conta": "792",
+  "nome": "KIPRATICO PRODUTOS DO LAR LTDA"
+ },
+ "143": {
+  "conta": "857",
+  "nome": "COMERCIAL KALLAS COM E IND DE ALIM LTDA."
+ },
+ "148": {
+  "conta": "852",
+  "nome": "EQUIPE DISTRIBUICAO, COMERC. E PROMOCOES"
+ },
+ "150": {
+  "conta": "850",
+  "nome": "INDUSTRIA E COMERCIO CASTELLANI LTDA"
+ },
+ "155": {
+  "conta": "774",
+  "nome": "COOPERATIVA CENTRAL MINEIRA DE LATICINIOS LTDA"
+ },
+ "158": {
+  "conta": "842",
+  "nome": "ORGANIC AGROINDUSTRIA E COMERCIO DE ALIMENTOS E BEBIDAS IMPORTACAO E EXPORTACAO LTDA"
+ },
+ "173": {
+  "conta": "942",
+  "nome": "KOMETUDO ALIMENTOS LTDA."
+ },
+ "174": {
+  "conta": "941",
+  "nome": "ELETRO LUZ COM. INST. E PROJETOS ELETRIC"
+ },
+ "175": {
+  "conta": "940",
+  "nome": "INDUSTRIA DE MASSAS ALIMENTICIAS DE LTDA"
+ },
+ "185": {
+  "conta": "609",
+  "nome": "ARROZEIRA SAO PEDRO LTDA"
+ },
+ "187": {
+  "conta": "928",
+  "nome": "VIVALOG - DISTRIBUICAO E LOGISTICA LTDA"
+ },
+ "195": {
+  "conta": "979",
+  "nome": "CLAUDIA M G DE MELO ROSA ME"
+ },
+ "198": {
+  "conta": "681",
+  "nome": "SEARA COMERCIO DE ALIMENTOS LT"
+ },
+ "199": {
+  "conta": "975",
+  "nome": "PALMARES ATACADO-DISTRIBUIDOR LTDA"
+ },
+ "215": {
+  "conta": "999",
+  "nome": "GRB DISTRIBUIDORA PRODUTOS ALIMENTICIOS"
+ },
+ "241": {
+  "conta": "1048",
+  "nome": "DISTRIBUIDORA ALHO BRASIL LTDA"
+ },
+ "248": {
+  "conta": "1065",
+  "nome": "LATICINIOS LARA EIRELI"
+ },
+ "249": {
+  "conta": "1066",
+  "nome": "CARLOS GUSTAVO DE OLIVEIRA"
+ },
+ "300": {
+  "conta": "681",
+  "nome": "SEARA COMERCIO DE ALIMENTOS LT"
+ },
+ "307": {
+  "conta": "1137",
+  "nome": "PICINATO & CIA LTDA"
+ },
+ "310": {
+  "conta": "506",
+  "nome": "GIGANTE DISTRIBUIDORA DE PRODUTOS NATURAIS LTDA"
+ },
+ "312": {
+  "conta": "1158",
+  "nome": "GIROSUL DISTRIBUIDORA LTDA"
+ },
+ "317": {
+  "conta": "612",
+  "nome": "UPSIDE DISTRIBUICAO DE ALIMENTOS LTDA"
+ },
+ "337": {
+  "conta": "1191",
+  "nome": "INDUSTRIA E COMERCIO DE PRODUTOS ALIMENTICIOS RF LTDA"
+ },
+ "340": {
+  "conta": "1199",
+  "nome": "COMERCIO REPRESENTACOES CECOTI LTDA"
+ },
+ "346": {
+  "conta": "1212",
+  "nome": "PRODOESTE VEICULOS E SERVICO LTDA"
+ },
+ "351": {
+  "conta": "1219",
+  "nome": "FRIGORIFICO FRIGMAR EIRELI"
+ },
+ "363": {
+  "conta": "1229",
+  "nome": "CAMIL ALIMENTOS S/A"
+ },
+ "374": {
+  "conta": "1248",
+  "nome": "PEIXOTO COMERCIO INDUSTRIA SERVICOS E TR"
+ },
+ "383": {
+  "conta": "1264",
+  "nome": "MTC DISTRIBUIDOR ATACADISTA DE ALIMENTOS"
+ },
+ "386": {
+  "conta": "1270",
+  "nome": "MIRA DISTRIBUIDORA DE PRODUTOS ALIMENTICIOS LTDA"
+ },
+ "402": {
+  "conta": "1299",
+  "nome": "JOSE CARLOS BRAGHINI NETO"
+ },
+ "406": {
+  "conta": "806",
+  "nome": "STOQUE MERCANTIL LTDA"
+ },
+ "418": {
+  "conta": "1319",
+  "nome": "ROZENDO VICENTE TEIXEIRA SITIO SAO MARCO"
+ },
+ "433": {
+  "conta": "1354",
+  "nome": "CAFE TRES CORACOES S.A"
+ },
+ "450": {
+  "conta": "1375",
+  "nome": "MULTICOM ATACADO E VAREJO S/A"
+ },
+ "451": {
+  "conta": "1374",
+  "nome": "MASSA DA FEIRA PRODUTOS ALIMENTICIOS LTD"
+ },
+ "469": {
+  "conta": "1403",
+  "nome": "DISTRIBUIDORA DE ALIMENTOS, FRIOS E CARN"
+ },
+ "470": {
+  "conta": "1402",
+  "nome": "FRIGOPAIVA LTDA"
+ },
+ "471": {
+  "conta": "1408",
+  "nome": "MM SP DISTRIBUIDORA E COMERCIO ATACADISTA DE PRODUTOS LTDA"
+ },
+ "479": {
+  "conta": "1421",
+  "nome": "TROPIMIX DIST. DE PROD. ALIMENT. EIRELI"
+ },
+ "481": {
+  "conta": "1419",
+  "nome": "JR AUTO PECAS - PARAISO"
+ },
+ "493": {
+  "conta": "1440",
+  "nome": "SCARELI PAES CONGELADOS EIRELI"
+ },
+ "517": {
+  "conta": "1478",
+  "nome": "FRONERI DISTRIB. DE SORVETES E CONG LTDA"
+ },
+ "518": {
+  "conta": "1477",
+  "nome": "CAIQUE DE MATTOS SALES"
+ },
+ "519": {
+  "conta": "1487",
+  "nome": "ALIANCA ATACADISTA LTDA"
+ },
+ "520": {
+  "conta": "1486",
+  "nome": "COMERCIAL MULT MIX PROD ALIMENTICIOS EIR"
+ },
+ "523": {
+  "conta": "1434",
+  "nome": "LUT MINAS INDUSTRIA E COMERCIO DE MASSAS LTDA"
+ },
+ "526": {
+  "conta": "1498",
+  "nome": "COOP REG PROD DE LEITE DE SERRANIA LTDA"
+ },
+ "527": {
+  "conta": "1497",
+  "nome": "JRB ALIMENTOS LTDA"
+ },
+ "528": {
+  "conta": "1496",
+  "nome": "DU LEITAO IGUARIAS SUINAS LTDA"
+ },
+ "531": {
+  "conta": "695",
+  "nome": "FUGINI ALIMENTOS LTDA"
+ },
+ "532": {
+  "conta": "1503",
+  "nome": "SOUZA & SOUZA COMERCIO ATACADISTA LTDA"
+ },
+ "537": {
+  "conta": "1515",
+  "nome": "F F REIS COMERCIO E REPRESENTACOES LTDA"
+ },
+ "547": {
+  "conta": "1531",
+  "nome": "FRIGORIFICO IPE INDUSTRIA E COMERCIO DE"
+ },
+ "564": {
+  "conta": "1541",
+  "nome": "BISCOITOS VOVO BELLE ARCEBURGO LTDA"
+ },
+ "565": {
+  "conta": "1550",
+  "nome": "F5 SMART COMERCIAL LTDA EPP"
+ },
+ "566": {
+  "conta": "1549",
+  "nome": "ALLPAN - COMERCIO DE PRODUTOS ALIMENTICI"
+ },
+ "570": {
+  "conta": "1545",
+  "nome": "AVANTE DISTRIBUIDORA DE ALIM E UTIL LTDA"
+ },
+ "571": {
+  "conta": "1544",
+  "nome": "SAVA FILIAL RIBEIRAO PRETO"
+ }
+}
