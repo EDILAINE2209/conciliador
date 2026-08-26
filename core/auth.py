@@ -10,6 +10,8 @@ import os
 
 import streamlit as st
 
+from core.branding import show_logo
+
 
 def _senha_configurada():
     pwd = os.environ.get("APP_PASSWORD")
@@ -26,6 +28,7 @@ def require_password():
     estiver configurada e a sessão ainda não tiver sido autenticada.
     Chame isso logo no início de CADA página (app.py e cada arquivo em
     pages/)."""
+    show_logo()
     pwd = _senha_configurada()
     if not pwd:
         return

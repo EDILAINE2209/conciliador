@@ -1,22 +1,36 @@
 # Conciliação Contábil — CSJ_IA
 
 Aplicativo web (Streamlit) com uma página por empresa/cliente, todas atrás
-de uma única senha. Hoje tem três:
+de uma única senha. Hoje tem três empresas ativas, mais uma página para
+pedir a inclusão de empresas novas:
 
 - **APAE São Sebastião do Paraiso** — concilia o relatório de doações
   (PDF) com o extrato bancário (OFX) e gera o `.txt` de importação.
 - **Antoninho Atacado e Varejo** — concilia os 3 extratos bancários
   (Sicoob, Itaú, Banco do Brasil) com o Contas a Pagar e gera dois
   `.txt`: a conciliação bancária do mês e as pendências do Contas a
-  Pagar.
+  Pagar. Também aceita, opcionalmente, o Plano de Contas para sugerir
+  conta de fornecedores novos por similaridade de nome.
 - **Haroke Supermercado** — concilia os 2 extratos bancários (Banco do
   Brasil, Sicoob) com o Contas a Pagar e o Plano de Contas (a conta de
   cada fornecedor é achada por similaridade de nome, em vez de um
   cadastro de IDs) e gera um único `.txt` de conciliação bancária.
+- **Nova Empresa** — formulário para o próprio pessoal do departamento
+  incluir uma empresa nova "copiando" as regras da Antoninho ou da
+  Haroke: escolhe o modelo, os bancos, a conta de cada categoria, e tem
+  duas saídas — **criar a empresa agora** (self-service, fica pronta na
+  hora) ou **baixar um pedido** pra eu revisar antes (bom pra casos fora
+  do padrão). Ver "Página: Nova Empresa" mais abaixo.
+- **Empresas** — onde as empresas criadas pelo self-service acima geram
+  o arquivo do mês, de forma bem parecida com a Antoninho/Haroke, mas
+  numa página só e genérica (`core/generic/`) em vez de uma página fixa
+  por empresa. Toda empresa nasce marcada como **não verificada** até
+  alguém conferir um mês fechado de verdade — ver "Página: Empresas"
+  mais abaixo.
 
-Para adicionar uma empresa nova no futuro, cria-se um arquivo em
-`pages/` (ver "Adicionando uma empresa nova" mais abaixo) — não é preciso
-duplicar o app inteiro.
+Uma empresa criada pelo self-service pode, mais tarde, "virar" uma página
+fixa de verdade (como a Antoninho e a Haroke) se fizer sentido — nesse
+caso, segue o processo em "Adicionando uma empresa nova" mais abaixo.
 
 ## Rodando localmente
 
@@ -102,7 +116,8 @@ especial escolhida).
 1. Informe o CNPJ e o período (`AAAAMM`, ex. `202608`) — transações fora
    desse mês nos extratos são ignoradas.
 2. Envie os 3 extratos (Sicoob, Itaú, Banco do Brasil, todos `.ofx`) e o
-   relatório "Contas a Pagar por Entrada" exportado em Excel.
+   relatório "Contas a Pagar por Entrada" exportado em Excel. O Plano de
+   Contas (Excel) é opcional — não é preciso para processar o mês.
 3. Clique em **Processar**. O app classifica cada transação bancária
    automaticamente em uma de 8 categorias (PIX recebido, cartão/
    maquininha, tarifas, IOF, juros, BB Rende Fácil, pagamento a
@@ -111,8 +126,11 @@ especial escolhida).
    fornecedor se trata.
 4. Confira **"Fornecedores para revisar"**: são pagamentos cujo
    fornecedor não foi encontrado no cadastro (caem na conta 506
-   "Fornecedores Diversos" por padrão). Informe a conta certa ali mesmo
-   — isso atualiza o cadastro para os próximos meses.
+   "Fornecedores Diversos" por padrão). Se você enviou o Plano de Contas,
+   o campo já vem preenchido com uma sugestão (achada por similaridade de
+   nome, igual à Haroke) — confira antes de aplicar, principalmente as de
+   confiança mais baixa. Informe a conta certa ali mesmo — isso já
+   cadastra o fornecedor pelo ID para os próximos meses.
 5. Baixe os dois arquivos: a **conciliação bancária** (tudo que foi
    identificado nos extratos) e as **pendências do Contas a Pagar**
    (parcelas que venceram no período mas não apareceram em nenhum
@@ -175,7 +193,64 @@ Antoninho), fornecedores com nomes muito parecidos no Plano de Contas
 podem exigir uma correção manual ocasional — a aba de revisão sinaliza
 exatamente esses casos antes de gerar o `.txt` definitivo.
 
-## Adicionando uma empresa nova
+## Página: Nova Empresa
+
+Formulário para o próprio pessoal do departamento incluir uma empresa
+nova, "copiando" as regras já validadas da Antoninho (fornecedor por
+cadastro de ID, funciona com Sicoob/Itaú/BB em qualquer combinação) ou da
+Haroke (fornecedor por nome contra um Plano de Contas, só Sicoob+BB).
+
+1. Preenche nome, CNPJ, o modelo a copiar, quais bancos usa e a conta
+   contábil de cada categoria do modelo escolhido (pode deixar em branco
+   pra usar a mesma conta de exemplo do modelo).
+2. No final, duas opções:
+   - **🚀 Criar empresa agora** — self-service: a empresa fica pronta pra
+     usar na hora, na página **🏢 Empresas** (ver abaixo), sem precisar
+     falar comigo. Ela nasce marcada como **não verificada**.
+   - **⬇️ Baixar pedido (.json)** — pra casos fora do padrão que o modo
+     self-service não cobre (banco novo, regra especial tipo a da
+     Antoninho na Haroke). Manda esse arquivo numa conversa com o Claude,
+     de preferência junto com um mês já fechado de verdade dessa empresa,
+     pra eu montar a lógica certa e revisar antes de qualquer arquivo
+     contábil real sair dela.
+
+### Como funciona o self-service por baixo dos panos
+
+O motor genérico (`core/generic/engine.py`) **não reimplementa** a
+classificação — ele roda a mesma função já validada da Antoninho ou da
+Haroke (mesmos padrões de memo, mesma forma de casar fornecedor) e só
+troca, no final, os números de conta genéricos do modelo pelos números
+que a empresa nova de verdade usa. Isso mantém o motor "validado" intacto
+e concentra o código novo numa camada fina de remapeamento — mas **não
+substitui a verificação contra um mês fechado real**: uma empresa nova
+sempre nasce com o cadastro de fornecedor vazio, então tudo cai em
+revisão manual no primeiro mês, e continua marcada como "não verificada"
+na tela até alguém confirmar que bateu.
+
+## Página: Empresas
+
+Onde as empresas criadas pela "Nova Empresa" (opção self-service) geram
+o arquivo do mês — mesma ideia da Antoninho/Haroke (upload dos extratos e
+do Contas a Pagar, resumo por regra, seção de fornecedores pra revisar,
+download do `.txt`), só que numa página só, genérica, que lê a
+configuração de cada empresa em vez de ter uma página fixa por empresa.
+
+Mostra um aviso "⚠️ não verificada" até alguém marcar, no final da
+página, que já conferiu um mês fechado de verdade contra o arquivo
+gerado — recomendado antes de confiar 100% numa empresa nova.
+
+As empresas ficam salvas em `empresas.json` (lista) e os cadastros/
+correções de fornecedor de cada uma em `empresas_data/<slug>_*.json` —
+mesma limitação de sempre: só ficam permanentes se forem baixados e
+subidos pro GitHub (ver "Publicando na nuvem" mais acima).
+
+## Adicionando uma empresa nova como página fixa (opcional)
+
+Não é um passo obrigatório — uma empresa criada pelo self-service já
+funciona direto na página **🏢 Empresas**. Vale a pena promovê-la a uma
+página fixa (como a Antoninho e a Haroke) quando ela tiver uma regra
+especial que o motor genérico não cobre, ou só por organização, depois
+de já estar rodando há alguns meses sem problema.
 
 1. Crie `pages/N_🏷️_NomeDaEmpresa.py` (o número define a ordem no menu).
 2. Se a lógica de conciliação for parecida com a APAE (nome+valor) ou com
@@ -186,6 +261,18 @@ exatamente esses casos antes de gerar o `.txt` definitivo.
    mesmo padrão: um módulo de leitura de cada arquivo de entrada, um de
    classificação/casamento, um de geração do `.txt`.
 3. Chame `core.auth.require_password()` logo no topo da página nova.
+4. Antes de publicar, reproduza um mês já fechado dessa empresa linha a
+   linha (mesmo processo da Antoninho e da Haroke) — só shippar depois de
+   bater 100% ou de entender e documentar cada divergência.
+
+## Logo da contabilidade
+
+O app mostra automaticamente um logo no topo do menu lateral (em todas as
+páginas, inclusive na tela de login) se existir um arquivo
+`assets/logo.png` (ou `.svg`, `.jpg`, `.jpeg`) na raiz do projeto — ver
+`core/branding.py`. Sem esse arquivo, o app funciona normalmente, só sem
+logo. Para ativar: coloque o arquivo do logo em `assets/logo.png` e suba
+essa pasta pro GitHub junto com o resto.
 
 ## Estrutura do projeto
 
@@ -199,25 +286,43 @@ apae_app/
 ├── config.json                     # config da APAE (gerado automaticamente)
 ├── antoninho_fornecedores.json     # cadastro vivo de fornecedores (gerado automaticamente)
 ├── haroke_overrides.json           # correções vivas de fornecedor (gerado automaticamente)
+├── empresas.json                   # empresas criadas via self-service (gerado automaticamente)
+├── empresas_data/                  # cadastro/correções de cada empresa self-service (idem)
+├── assets/
+│   └── logo.png                    # logo da contabilidade (opcional — ver "Logo da contabilidade")
 ├── pages/
 │   ├── 1_🏥_APAE.py
 │   ├── 2_🏪_Antoninho.py
-│   └── 3_🛒_Haroke.py
+│   ├── 3_🛒_Haroke.py
+│   ├── 4_🏗️_Nova_Empresa.py        # cria empresa (self-service) OU baixa pedido pra revisão
+│   └── 5_🏢_Empresas.py            # gera arquivo do mês pras empresas self-service
 └── core/
     ├── auth.py                     # tela de senha, compartilhada por todas as páginas
+    ├── branding.py                 # logo no topo do menu lateral, se assets/logo.* existir
     ├── config.py                   # config da APAE
     ├── pdf_extract.py              # leitura do PDF de doações (APAE)
     ├── ofx_parse.py                # leitura do OFX de PIX recebidos (APAE)
     ├── matching.py                 # casamento nome+valor (APAE)
     ├── txt_generator.py            # geração do .txt final da APAE
+    ├── common/
+    │   ├── plano_de_contas.py      # leitura genérica de fornecedores no Plano de Contas
+    │   │                           # (usada pela Antoninho e pela Haroke)
+    │   └── templates.py            # descrição dos modelos "Antoninho"/"Haroke" usada na
+    │                               # página Nova Empresa
+    ├── generic/
+    │   ├── empresas.py              # empresas.json: criar/listar/atualizar empresas self-service
+    │   └── engine.py                # roda a classificação da Antoninho/Haroke sem alterar
+    │                                # nada nela, e remapeia as contas pra empresa self-service
     ├── antoninho/
     │   ├── ofx_parse.py            # leitura genérica dos 3 extratos (todas as transações)
     │   ├── payables.py             # leitura do Contas a Pagar (Excel)
-    │   ├── cadastro.py             # cadastro fornecedor -> conta contábil
+    │   ├── cadastro.py             # cadastro fornecedor -> conta contábil (por ID)
+    │   ├── plano_de_contas.py      # reexporta core/common/plano_de_contas.py
+    │   ├── matching.py             # sugestão de conta por similaridade de nome (opcional)
     │   ├── classify.py             # motor de classificação (12 regras)
     │   └── generate.py             # orquestra tudo e gera os 2 .txt
     └── haroke/
-        ├── plano_de_contas.py      # leitura dos fornecedores no Plano de Contas (Excel)
+        ├── plano_de_contas.py      # reexporta core/common/plano_de_contas.py
         ├── cadastro.py             # correções manuais de fornecedor -> conta contábil
         ├── matching.py             # acha a conta do fornecedor por similaridade de nome
         ├── classify.py             # motor de classificação (12 regras)

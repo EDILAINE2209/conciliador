@@ -7,6 +7,8 @@ import streamlit as st
 from core.auth import require_password
 from core.antoninho.cadastro import load_cadastro, save_cadastro, registrar_fornecedor, CONTA_PADRAO
 from core.antoninho.generate import processar, gerar_txt_conciliacao, gerar_txt_pendencias, NOMES_REGRA
+from core.antoninho.plano_de_contas import load_fornecedores
+from core.antoninho.matching import best_account
 
 st.set_page_config(page_title="Antoninho — Conciliação Bancária", page_icon="🏪", layout="wide")
 require_password()
@@ -115,6 +117,14 @@ with tab_gerar:
     ofx_itau = c2.file_uploader("Extrato Itaú (OFX)", type=["ofx"], key="ofx_itau")
     ofx_bb = c3.file_uploader("Extrato Banco do Brasil (OFX)", type=["ofx"], key="ofx_bb")
     cap_file = st.file_uploader("Contas a Pagar por Entrada (Excel)", type=["xlsx"], key="cap_file")
+    pdc_file = st.file_uploader(
+        "Plano de Contas (Excel) — opcional", type=["xlsx"], key="pdc_file_atn",
+        help="Não é obrigatório para processar o mês. Se enviado, o app usa a lista de "
+             "fornecedores do Plano de Contas para SUGERIR uma conta (por similaridade de "
+             "nome) para os fornecedores que aparecerem fora do cadastro, na seção "
+             "\"Fornecedores para revisar\" abaixo — a conta ainda precisa ser conferida e "
+             "aplicada manualmente, igual já acontece hoje.",
+    )
 
     processar_disabled = not (ofx_sicoob and ofx_itau and ofx_bb and cap_file)
     if st.button("🔄 Processar", type="primary", disabled=processar_disabled):
@@ -151,17 +161,40 @@ with tab_gerar:
 
     st.subheader("3. Fornecedores para revisar")
     novos = result["novos_fornecedores"]
+
+    accounts = None
+    if pdc_file is not None:
+        try:
+            accounts = load_fornecedores(pdc_file)
+        except Exception as e:
+            st.error(f"Não consegui ler o Plano de Contas enviado: {e}")
+
     if novos:
-        st.warning(
+        aviso = (
             f"{len(novos)} fornecedor(es) não encontrados no cadastro caíram na conta "
             f"{CONTA_PADRAO} (Fornecedores Diversos) por padrão. Confira se está certo "
             "ou informe a conta correta abaixo — isso já atualiza o cadastro para os "
             "próximos meses."
         )
+        if accounts is not None:
+            aviso += (
+                " Como você enviou o Plano de Contas, o campo já vem preenchido com a "
+                "sugestão encontrada por similaridade de nome — confira antes de aplicar, "
+                "principalmente as de confiança mais baixa."
+            )
+        st.warning(aviso)
         for complemento, cnt in sorted(novos.items(), key=lambda kv: -kv[1]):
+            nome_busca = complemento.split(' - ', 1)[-1].strip()
+            sugestao_txt = ""
+            sugestao_default = CONTA_PADRAO
+            if accounts:
+                sug_conta, sug_nome, sug_score = best_account(nome_busca, accounts)
+                if sug_conta:
+                    sugestao_default = sug_conta
+                    sugestao_txt = f"  → sugestão: {sug_conta} {sug_nome} (score {sug_score:.2f})"
             c1, c2, c3 = st.columns([4, 1, 1])
-            c1.text(f"{complemento}  ({cnt}x)")
-            conta_atual = st.session_state["antoninho_revisao"].get(complemento, CONTA_PADRAO)
+            c1.text(f"{complemento}  ({cnt}x){sugestao_txt}")
+            conta_atual = st.session_state["antoninho_revisao"].get(complemento, sugestao_default)
             nova_conta = c2.text_input("Conta", value=conta_atual, key=f"rev_{complemento}", label_visibility="collapsed")
             st.session_state["antoninho_revisao"][complemento] = nova_conta
             if c3.button("Aplicar", key=f"apply_{complemento}"):
