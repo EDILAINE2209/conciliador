@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 
@@ -79,6 +80,22 @@ with tab_cadastro:
     if st.button("💾 Salvar cadastro", type="primary"):
         save_cadastro(cadastro)
         st.success("Cadastro salvo.")
+
+    st.divider()
+    st.caption(
+        "⚠️ O botão acima só salva aqui dentro do app rodando agora. Se o app "
+        "reiniciar (ele faz isso sozinho de tempos em tempos), essa gravação "
+        "pode se perder. Pra deixar as mudanças permanentes, baixe o arquivo "
+        "abaixo e suba no GitHub, substituindo o arquivo "
+        "**antoninho_fornecedores_seed.json** — assim o cadastro atualizado "
+        "vira o novo ponto de partida do app."
+    )
+    st.download_button(
+        "⬇️ Baixar cadastro atualizado (para subir no GitHub)",
+        data=json.dumps(cadastro, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8"),
+        file_name="antoninho_fornecedores_seed.json",
+        mime="application/json",
+    )
 
 # ==========================================================================
 # ABA: GERAR ARQUIVOS DO MÊS

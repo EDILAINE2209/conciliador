@@ -12,3 +12,4 @@ st.write(
 )
 st.page_link("pages/1_🏥_APAE.py", label="APAE São Sebastião do Paraiso — Doações", icon="🏥")
 st.page_link("pages/2_🏪_Antoninho.py", label="Antoninho Atacado e Varejo — Conciliação Bancária", icon="🏪")
+st.page_link("pages/3_🛒_Haroke.py", label="Haroke Supermercado — Conciliação Bancária", icon="🛒")

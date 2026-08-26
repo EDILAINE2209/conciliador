@@ -1,7 +1,7 @@
 # Conciliação Contábil — CSJ_IA
 
 Aplicativo web (Streamlit) com uma página por empresa/cliente, todas atrás
-de uma única senha. Hoje tem duas:
+de uma única senha. Hoje tem três:
 
 - **APAE São Sebastião do Paraiso** — concilia o relatório de doações
   (PDF) com o extrato bancário (OFX) e gera o `.txt` de importação.
@@ -9,6 +9,10 @@ de uma única senha. Hoje tem duas:
   (Sicoob, Itaú, Banco do Brasil) com o Contas a Pagar e gera dois
   `.txt`: a conciliação bancária do mês e as pendências do Contas a
   Pagar.
+- **Haroke Supermercado** — concilia os 2 extratos bancários (Banco do
+  Brasil, Sicoob) com o Contas a Pagar e o Plano de Contas (a conta de
+  cada fornecedor é achada por similaridade de nome, em vez de um
+  cadastro de IDs) e gera um único `.txt` de conciliação bancária.
 
 Para adicionar uma empresa nova no futuro, cria-se um arquivo em
 `pages/` (ver "Adicionando uma empresa nova" mais abaixo) — não é preciso
@@ -34,13 +38,14 @@ Abre em `http://localhost:8501`. As páginas aparecem no menu à esquerda.
 A forma mais simples e gratuita é o **Streamlit Community Cloud**:
 
 1. Suba esta pasta inteira para um repositório no GitHub (pode ser
-   privado) — `app.py`, `pages/`, `core/` (com a subpasta
-   `core/antoninho/`), `requirements.txt`, `packages.txt` e os arquivos
-   `antoninho_fornecedores_seed.json`. **Atenção**: se você arrastar os
+   privado) — `app.py`, `pages/`, `core/` (com as subpastas
+   `core/antoninho/` e `core/haroke/`), `requirements.txt`,
+   `packages.txt` e os arquivos `antoninho_fornecedores_seed.json` e
+   `haroke_overrides_seed.json`. **Atenção**: se você arrastar os
    arquivos pelo navegador em vez de usar `git push`, confira depois se
-   as subpastas (`pages/`, `core/`, `core/antoninho/`) foram mesmo
-   criadas no GitHub — o upload por arrasta-e-solta às vezes larga tudo
-   solto na raiz.
+   as subpastas (`pages/`, `core/`, `core/antoninho/`, `core/haroke/`)
+   foram mesmo criadas no GitHub — o upload por arrasta-e-solta às vezes
+   larga tudo solto na raiz.
 2. Entre em https://share.streamlit.io, conecte sua conta do GitHub e
    escolha o repositório e o arquivo `app.py` (o app principal —
    Streamlit descobre as páginas em `pages/` sozinho).
@@ -133,6 +138,43 @@ para você confirmar a conta certa. Recomenda-se, como em qualquer mês
 novo, conferir o resumo e a lista de revisão antes de importar os `.txt`
 no sistema contábil — exatamente como já era feito manualmente.
 
+## Página: Haroke Supermercado
+
+**Aba "Gerar arquivo do mês":**
+
+1. Informe o CNPJ e o período (`AAAAMM`, ex. `202608`) — transações fora
+   desse mês nos extratos são ignoradas.
+2. Envie os 2 extratos (Banco do Brasil e Sicoob, `.ofx`), o relatório
+   de Contas a Pagar (Excel) e o Plano de Contas (Excel) do mês.
+3. Clique em **Processar**. O app classifica cada transação bancária em
+   uma de 12 categorias e casa cada pagamento com a parcela
+   correspondente do Contas a Pagar; a conta do fornecedor é achada
+   comparando o nome dele com os nomes do Plano de Contas (similaridade
+   de texto), não por um cadastro de IDs como na Antoninho.
+4. Confira **"Fornecedores para revisar"**: são parcelas cujo match de
+   nome ficou com confiança abaixo de 95% — o app já mostra a conta
+   sugerida e o score. Informe a conta certa ali mesmo — isso salva uma
+   correção manual para os próximos meses.
+5. Baixe o arquivo de conciliação bancária do mês.
+
+**Aba "📇 Correções de fornecedor":** lista e permite editar/adicionar
+manualmente as correções de nome que têm prioridade sobre a comparação
+automática com o Plano de Contas — por exemplo quando a grafia no
+Contas a Pagar diverge do plano, ou quando o fornecedor ainda não tem
+conta própria (cai em 506, Fornecedores Diversos, até uma conta ser
+criada).
+
+### Precisão e limitações conhecidas
+
+O motor de classificação foi validado linha a linha contra o arquivo de
+referência de julho/2026 já fechado (945 lançamentos, R$ 445.357,46):
+reprodução byte a byte, incluindo a ordem das linhas e a conta
+encontrada para cada fornecedor. Como a conta do fornecedor aqui vem de
+comparação de texto (em vez de um cadastro fixo de IDs como na
+Antoninho), fornecedores com nomes muito parecidos no Plano de Contas
+podem exigir uma correção manual ocasional — a aba de revisão sinaliza
+exatamente esses casos antes de gerar o `.txt` definitivo.
+
 ## Adicionando uma empresa nova
 
 1. Crie `pages/N_🏷️_NomeDaEmpresa.py` (o número define a ordem no menu).
@@ -153,11 +195,14 @@ apae_app/
 ├── requirements.txt
 ├── packages.txt                    # poppler-utils (para o PDF da APAE)
 ├── antoninho_fornecedores_seed.json  # cadastro inicial de fornecedores (Antoninho)
+├── haroke_overrides_seed.json      # correções manuais iniciais de fornecedor (Haroke)
 ├── config.json                     # config da APAE (gerado automaticamente)
 ├── antoninho_fornecedores.json     # cadastro vivo de fornecedores (gerado automaticamente)
+├── haroke_overrides.json           # correções vivas de fornecedor (gerado automaticamente)
 ├── pages/
 │   ├── 1_🏥_APAE.py
-│   └── 2_🏪_Antoninho.py
+│   ├── 2_🏪_Antoninho.py
+│   └── 3_🛒_Haroke.py
 └── core/
     ├── auth.py                     # tela de senha, compartilhada por todas as páginas
     ├── config.py                   # config da APAE
@@ -165,10 +210,17 @@ apae_app/
     ├── ofx_parse.py                # leitura do OFX de PIX recebidos (APAE)
     ├── matching.py                 # casamento nome+valor (APAE)
     ├── txt_generator.py            # geração do .txt final da APAE
-    └── antoninho/
-        ├── ofx_parse.py            # leitura genérica dos 3 extratos (todas as transações)
-        ├── payables.py             # leitura do Contas a Pagar (Excel)
-        ├── cadastro.py             # cadastro fornecedor -> conta contábil
+    ├── antoninho/
+    │   ├── ofx_parse.py            # leitura genérica dos 3 extratos (todas as transações)
+    │   ├── payables.py             # leitura do Contas a Pagar (Excel)
+    │   ├── cadastro.py             # cadastro fornecedor -> conta contábil
+    │   ├── classify.py             # motor de classificação (12 regras)
+    │   └── generate.py             # orquestra tudo e gera os 2 .txt
+    └── haroke/
+        ├── plano_de_contas.py      # leitura dos fornecedores no Plano de Contas (Excel)
+        ├── cadastro.py             # correções manuais de fornecedor -> conta contábil
+        ├── matching.py             # acha a conta do fornecedor por similaridade de nome
         ├── classify.py             # motor de classificação (12 regras)
-        └── generate.py             # orquestra tudo e gera os 2 .txt
+        └── generate.py             # orquestra tudo e gera o .txt (reaproveita
+                                     # core/antoninho/ofx_parse.py e payables.py)
 ```
