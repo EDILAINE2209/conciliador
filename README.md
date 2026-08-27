@@ -1,7 +1,7 @@
 # Conciliação Contábil — CSJ_IA
 
 Aplicativo web (Streamlit) com uma página por empresa/cliente, todas atrás
-de uma única senha. Hoje tem três empresas ativas, mais uma página para
+de uma única senha. Hoje tem quatro empresas ativas, mais uma página para
 pedir a inclusão de empresas novas:
 
 - **APAE São Sebastião do Paraiso** — concilia o relatório de doações
@@ -15,6 +15,15 @@ pedir a inclusão de empresas novas:
   Brasil, Sicoob) com o Contas a Pagar e o Plano de Contas (a conta de
   cada fornecedor é achada por similaridade de nome, em vez de um
   cadastro de IDs) e gera um único `.txt` de conciliação bancária.
+- **Borborema Borborema E Cia Ltda** — lê o extrato Bradesco em PDF
+  **escaneado** (sem camada de texto — usa OCR, não `pdftotext`) e gera o
+  `.txt` de conciliação bancária do mês. Diferente das outras empresas,
+  não casa com um Contas a Pagar: classifica cada lançamento pelo texto
+  do próprio extrato (PIX recebido, PIX enviado, pagamento de fornecedor,
+  tarifas, tributos etc.) e confere automaticamente o saldo de cada dia
+  contra o saldo impresso no extrato, sinalizando pra revisão manual todo
+  dia em que a conta não fechar exatamente — ver "Página: Borborema" e a
+  seção de precisão/limitações mais abaixo antes de usar.
 - **Nova Empresa** — formulário para o próprio pessoal do departamento
   incluir uma empresa nova "copiando" as regras da Antoninho ou da
   Haroke: escolhe o modelo, os bancos, a conta de cada categoria, e tem
@@ -34,8 +43,10 @@ caso, segue o processo em "Adicionando uma empresa nova" mais abaixo.
 
 ## Rodando localmente
 
-Requer Python 3.10+ e o pacote `poppler-utils` do sistema (fornece o
-comando `pdftotext`, usado para ler o PDF da APAE).
+Requer Python 3.10+ e os pacotes de sistema `poppler-utils` (fornece o
+`pdftotext`, usado para ler o PDF da APAE, e o `pdftoppm`, usado para
+rasterizar o PDF da Borborema) e `tesseract-ocr` (OCR do extrato escaneado
+da Borborema).
 
 ```bash
 # Ubuntu/Debian
@@ -193,6 +204,54 @@ Antoninho), fornecedores com nomes muito parecidos no Plano de Contas
 podem exigir uma correção manual ocasional — a aba de revisão sinaliza
 exatamente esses casos antes de gerar o `.txt` definitivo.
 
+## Página: Borborema Borborema E Cia Ltda
+
+1. Informe o CNPJ e o ano do período.
+2. Envie o extrato Bradesco do mês em PDF e clique em **Processar (OCR)**
+   — demora de um a três minutos, porque o PDF é uma imagem escaneada (o
+   app roda `pdftoppm` + `tesseract`, não `pdftotext`).
+3. Confira o resumo: quantos lançamentos foram extraídos, quantos vieram
+   marcados para revisar, e em quantos dias o saldo calculado não bateu
+   com o "SALDO EM dd/mm" impresso no extrato — a lista desses dias
+   aparece com o valor calculado ao lado do valor impresso.
+4. Revise a tabela de lançamentos: as linhas marcadas em **revisar** (dias
+   com saldo divergente, ou um trecho que o OCR não conseguiu classificar
+   com confiança) aparecem primeiro. Edite qualquer campo direto na
+   tabela, apague uma linha errada ou adicione uma linha que o OCR não
+   pegou — a tabela é a fonte da verdade para o arquivo final, não o que
+   o OCR leu.
+5. Baixe o `.txt` de lançamentos do mês.
+
+### Precisão e limitações conhecidas
+
+Diferente da Antoninho/Haroke (que leem um extrato eletrônico, OFX), o
+extrato da Borborema é um **PDF escaneado sem camada de texto** — a
+única forma de ler é OCR, e OCR erra em documento escaneado (dígito
+trocado, uma linha que sai ilegível, e uma vez até uma via física do
+banco veio com a borda física cortada, perdendo dígitos de forma
+irrecuperável). Por isso este módulo foi desenhado para nunca confiar
+cegamente no OCR:
+
+- todo dia do extrato tem seu saldo recalculado (saldo anterior + PIX/
+  rendimentos recebidos − pagamentos/tarifas/tributos) e comparado com o
+  "SALDO EM dd/mm" impresso; qualquer diferença marca **todos** os
+  lançamentos daquele dia para revisão manual, em vez de deixar passar um
+  valor errado sem avisar;
+- um trecho do extrato que o OCR não conseguir encaixar em nenhuma regra
+  de classificação conhecida também cai em revisão, em vez de ser
+  adivinhado ou descartado;
+- a tabela de lançamentos na tela é sempre editável antes de gerar o
+  `.txt` — nada é baixado sem passar por essa conferência.
+
+Testado nos extratos já fechados de abril, maio e junho/2026 (276, 176 e
+210 lançamentos, respectivamente, fechados manualmente linha a linha
+antes deste módulo existir): a extração automática bate exatamente com
+esses lançamentos em boa parte dos casos e sinaliza corretamente os dias
+com erro de OCR nos demais — mas **nenhum mês da Borborema deve ser
+enviado para a contabilidade sem alguém revisar a tabela na tela
+primeiro**, diferente das outras empresas do app, que já têm motor
+validado a ponto de precisar de revisão só nos casos sinalizados.
+
 ## Página: Nova Empresa
 
 Formulário para o próprio pessoal do departamento incluir uma empresa
@@ -280,7 +339,7 @@ essa pasta pro GitHub junto com o resto.
 apae_app/
 ├── app.py                          # página inicial (login + menu)
 ├── requirements.txt
-├── packages.txt                    # poppler-utils (para o PDF da APAE)
+├── packages.txt                    # poppler-utils (PDF da APAE/Borborema) + tesseract-ocr (OCR da Borborema)
 ├── antoninho_fornecedores_seed.json  # cadastro inicial de fornecedores (Antoninho)
 ├── haroke_overrides_seed.json      # correções manuais iniciais de fornecedor (Haroke)
 ├── config.json                     # config da APAE (gerado automaticamente)
@@ -295,7 +354,8 @@ apae_app/
 │   ├── 2_🏪_Antoninho.py
 │   ├── 3_🛒_Haroke.py
 │   ├── 4_🏗️_Nova_Empresa.py        # cria empresa (self-service) OU baixa pedido pra revisão
-│   └── 5_🏢_Empresas.py            # gera arquivo do mês pras empresas self-service
+│   ├── 5_🏢_Empresas.py            # gera arquivo do mês pras empresas self-service
+│   └── 6_🏦_Borborema.py           # extrato Bradesco escaneado (OCR) da Borborema
 └── core/
     ├── auth.py                     # tela de senha, compartilhada por todas as páginas
     ├── branding.py                 # logo no topo do menu lateral, se assets/logo.* existir
@@ -321,11 +381,16 @@ apae_app/
     │   ├── matching.py             # sugestão de conta por similaridade de nome (opcional)
     │   ├── classify.py             # motor de classificação (12 regras)
     │   └── generate.py             # orquestra tudo e gera os 2 .txt
-    └── haroke/
-        ├── plano_de_contas.py      # reexporta core/common/plano_de_contas.py
-        ├── cadastro.py             # correções manuais de fornecedor -> conta contábil
-        ├── matching.py             # acha a conta do fornecedor por similaridade de nome
-        ├── classify.py             # motor de classificação (12 regras)
-        └── generate.py             # orquestra tudo e gera o .txt (reaproveita
-                                     # core/antoninho/ofx_parse.py e payables.py)
+    ├── haroke/
+    │   ├── plano_de_contas.py      # reexporta core/common/plano_de_contas.py
+    │   ├── cadastro.py             # correções manuais de fornecedor -> conta contábil
+    │   ├── matching.py             # acha a conta do fornecedor por similaridade de nome
+    │   ├── classify.py             # motor de classificação (12 regras)
+    │   └── generate.py             # orquestra tudo e gera o .txt (reaproveita
+    │                                # core/antoninho/ofx_parse.py e payables.py)
+    └── borborema/
+        ├── ocr_extract.py          # rasteriza o PDF (pdftoppm), OCR por coluna (tesseract)
+        │                           # e extrai lançamentos + saldo de cada dia
+        ├── classify.py             # mapa de contas (13 categorias) + regras de classificação
+        └── generate.py             # orquestra tudo, confere o saldo diário e gera o .txt
 ```
