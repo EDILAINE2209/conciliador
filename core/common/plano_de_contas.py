@@ -24,7 +24,10 @@ def norm(s: str) -> str:
     return re.sub(r'\s+', ' ', s).strip()
 
 
-def load_fornecedores(path: str) -> list[dict]:
+def load_accounts(path: str, prefix: str) -> list[dict]:
+    """Lê qualquer grupo do Plano de Contas pelo prefixo de classificação
+    (ex.: '2.1.3.01' fornecedores, '1.1.2.01' clientes) — mesmo leiaute,
+    só muda o grupo procurado."""
     wb = openpyxl.load_workbook(path, data_only=True)
     ws = wb.active
     accounts = []
@@ -40,6 +43,16 @@ def load_fornecedores(path: str) -> list[dict]:
                 nome = val
         if nome is None:
             continue
-        if isinstance(classif, str) and classif.startswith('2.1.3.01'):
+        if isinstance(classif, str) and classif.startswith(prefix):
             accounts.append({'code': str(code), 'nome': str(nome).strip(), 'norm': norm(nome)})
     return accounts
+
+
+def load_fornecedores(path: str) -> list[dict]:
+    return load_accounts(path, '2.1.3.01')
+
+
+def load_clientes(path: str) -> list[dict]:
+    """Grupo 1.1.2.01 (clientes) — usado na regra 13 (transferência
+    recebida do BB nomeando o cliente pagador)."""
+    return load_accounts(path, '1.1.2.01')

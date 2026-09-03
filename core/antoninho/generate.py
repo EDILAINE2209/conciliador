@@ -19,6 +19,9 @@ from core.antoninho.payables import parse_payables_excel
 from core.antoninho.classify import PayableMatcher, classify_txn, strip_accents
 
 NOMES_REGRA = {
+    '330': 'Seguros',
+    '317': 'Rendimentos de aplicação',
+    '315': 'Transferência recebida / PIX QR Code (cliente identificado)',
     '314': 'PIX recebidos (Sicoob)',
     '371': 'Cartão / maquininha (SIPAG, Cielo, Rede)',
     '233': 'Tarifas bancárias',
@@ -35,12 +38,16 @@ def _value_str(v: float) -> str:
     return f"{v:.2f}".replace('.', ',')
 
 
-def processar(ofx_paths: dict, contas_a_pagar_path: str, cadastro: dict, ano_mes: str):
+def processar(ofx_paths: dict, contas_a_pagar_path: str, cadastro: dict, ano_mes: str,
+              accounts_clientes: list | None = None):
     """ofx_paths: {"551": path_sicoob, "552": path_itau, "8": path_bb}.
-    Devolve um dict com: lancamentos (bancários, classificados),
-    pendencias (parcelas não encontradas no banco), resumo (contagem/valor
-    por regra) e novos_fornecedores (fids que caíram em 506 sem cadastro,
-    para revisão manual antes de gerar o txt definitivo)."""
+    accounts_clientes: lista opcional do grupo 1.1.2.01 do Plano de Contas
+    (core.antoninho.plano_de_contas.load_clientes) — só usada na regra 13
+    (transferência recebida do BB); sem ela, essa regra cai na conta padrão
+    504 "Clientes Diversos". Devolve um dict com: lancamentos (bancários,
+    classificados), pendencias (parcelas não encontradas no banco), resumo
+    (contagem/valor por regra) e novos_fornecedores (fids que caíram em 506
+    sem cadastro, para revisão manual antes de gerar o txt definitivo)."""
     payables = parse_payables_excel(contas_a_pagar_path)
     matcher = PayableMatcher(payables)
 
@@ -52,7 +59,7 @@ def processar(ofx_paths: dict, contas_a_pagar_path: str, cadastro: dict, ano_mes
     lancamentos = []
     novos_fornecedores = {}
     for t in txns:
-        l = classify_txn(t, matcher, cadastro, ano_mes)
+        l = classify_txn(t, matcher, cadastro, ano_mes, accounts_clientes=accounts_clientes)
         if l is None:
             continue
         lancamentos.append(l)

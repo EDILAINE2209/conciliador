@@ -7,6 +7,6 @@ guarda essas sugestões separadas — uma vez aceita, ela vira uma entrada
 comum no cadastro por ID (antoninho_fornecedores.json), do mesmo jeito que
 uma conta informada manualmente.
 """
-from core.common.plano_de_contas import norm, load_fornecedores
+from core.common.plano_de_contas import norm, load_fornecedores, load_clientes
 
-__all__ = ["norm", "load_fornecedores"]
+__all__ = ["norm", "load_fornecedores", "load_clientes"]

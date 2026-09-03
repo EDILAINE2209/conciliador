@@ -14,17 +14,28 @@ adivinhados.
 Regras (nesta ordem de prioridade):
   0. Exclusões: saldo informativo do Itaú ("SALDO..."), depósito em cheque
      bloqueado/liberado do Sicoob (não são fatos financeiros novos).
-  1. PIX recebido (só Sicoob)              -> debito=banco   credito=504  hist=314
-  2. Cartão/maquininha (SIPAG, Cielo, Rede) -> debito=banco   credito=730  hist=371
-  3. Tarifas bancárias                      -> debito=906     credito=banco hist=233
-  4. IOF                                    -> debito=907     credito=banco hist=252
-  5. Juros                                  -> debito=374     credito=banco hist=255
-  6. BB Rende Fácil (aplicação/resgate)     -> 11<->8          hist=204/318
-  7. Boleto/fornecedor pago (débito)        -> debito=conta do fornecedor (cadastro)
-                                                credito=banco  hist=429
-  8. Tudo o mais (depósitos, devoluções,
-     transferências, seguros, rendimentos)  -> conta 506 do lado que não é banco
-                                                hist=370
+  1. Seguros (qualquer banco, memo com "SEG")
+                                             -> debito=358     credito=banco hist=330
+  2. Rendimentos de aplicação (qualquer banco, memo com "RENDIMENTO")
+                                             -> debito=banco   credito=432  hist=317
+  3. Transferência recebida (só BB, nomeia o cliente pagador)
+                                             -> debito=banco   credito=conta do cliente
+                                                (grupo 1.1.2.01, por similaridade de nome
+                                                 contra o Plano de Contas; sem Plano de
+                                                 Contas ou sem match, cai em 504 "Clientes
+                                                 Diversos")                hist=315
+  4. PIX QR Code recebido (só Itaú)          -> debito=banco   credito=730  hist=315
+  5. PIX recebido (só Sicoob)                -> debito=banco   credito=504  hist=314
+  6. Cartão/maquininha (SIPAG, Cielo, Rede)  -> debito=banco   credito=730  hist=371
+  7. Tarifas bancárias                       -> debito=906     credito=banco hist=233
+  8. IOF                                     -> debito=907     credito=banco hist=252
+  9. Juros                                   -> debito=374     credito=banco hist=255
+  10. BB Rende Fácil (aplicação/resgate)     -> 11<->8          hist=204/318
+  11. Boleto/fornecedor pago (débito)        -> debito=conta do fornecedor (cadastro)
+                                                 credito=banco  hist=429
+  12. Tudo o mais (depósitos, devoluções,
+      transferências não identificadas)      -> conta 506 do lado que não é banco
+                                                 hist=370
 """
 import re
 import unicodedata
@@ -43,6 +54,11 @@ BOLETO_MEMO_PREFIXES = (
 
 ITAU_SALDO_PREFIX = 'SALDO'
 SICOOB_BLOQ_PREFIXES = ('DEP.CHEQUE BLOQ', 'LIBERA')
+
+CONTA_CLIENTE_PADRAO = "504"  # Clientes Diversos (grupo 1.1.2.01) — mesma lógica do 506 p/ fornecedores
+CLIENTE_MATCH_SCORE_MIN = 0.5  # abaixo disso, usa a conta padrão em vez de arriscar um match ruim
+
+_TRANSF_NOME_RE = re.compile(r'\d{2}/\d{2}\s+\d{2}:\d{2}\s+(.*)$')
 
 
 def strip_accents(s: str) -> str:
@@ -104,10 +120,28 @@ class PayableMatcher:
         return None
 
 
-def classify_txn(t, matcher: PayableMatcher, cadastro: dict, ano_mes: str):
+def get_conta_cliente(nome_fragmento: str, accounts_clientes: list | None):
+    """Análogo ao get_conta (fornecedores), mas para o grupo de clientes
+    (1.1.2.01): não há cadastro persistente por ID aqui (o nome já vem
+    identificável no memo do banco), então casa por similaridade contra o
+    Plano de Contas na hora. Sem Plano de Contas enviado, ou sem candidato
+    bom o bastante, cai na conta padrão 504 (Clientes Diversos)."""
+    if not accounts_clientes:
+        return CONTA_CLIENTE_PADRAO, None, 0.0
+    from core.antoninho.matching import best_account
+    conta, nome_conta, score = best_account(nome_fragmento, accounts_clientes)
+    if conta is None or score < CLIENTE_MATCH_SCORE_MIN:
+        return CONTA_CLIENTE_PADRAO, nome_conta, score
+    return conta, nome_conta, score
+
+
+def classify_txn(t, matcher: PayableMatcher, cadastro: dict, ano_mes: str, accounts_clientes: list | None = None):
     """t: Txn (core.antoninho.ofx_parse.Txn). ano_mes: 'AAAAMM' do período
-    sendo processado (transações fora dele são ignoradas). Devolve um
-    Lancamento ou None (excluído / fora do período)."""
+    sendo processado (transações fora dele são ignoradas). accounts_clientes:
+    lista opcional do grupo 1.1.2.01 do Plano de Contas (ver
+    core.antoninho.plano_de_contas.load_clientes), usada só na regra 13
+    (transferência recebida do BB). Devolve um Lancamento ou None (excluído
+    / fora do período)."""
     memo, banco, amt, nome, date = t.memo, t.banco, t.amt, t.name, t.date
 
     if banco == '552' and memo.upper().startswith(ITAU_SALDO_PREFIX):
@@ -119,6 +153,22 @@ def classify_txn(t, matcher: PayableMatcher, cadastro: dict, ano_mes: str):
 
     is_credit = amt > 0
     data_saida = _ddmmaaaa(date)
+    memo_na = strip_accents(memo).upper()  # sem acento, maiúsculo — p/ casar prefixos com segurança
+
+    if 'SEG' in memo_na:
+        return Lancamento(data_saida, '358', banco, '330', -amt, strip_accents(memo), t)
+
+    if 'RENDIMENTO' in memo_na:
+        return Lancamento(data_saida, banco, '432', '317', amt, strip_accents(memo), t)
+
+    if banco == '8' and memo_na.startswith('TRANSFERENCIA RECEBIDA'):
+        m = _TRANSF_NOME_RE.search(memo)
+        fragmento = m.group(1).strip() if m else memo
+        conta, _nome_conta, _score = get_conta_cliente(fragmento, accounts_clientes)
+        return Lancamento(data_saida, banco, conta, '315', amt, strip_accents(memo), t)
+
+    if banco == '552' and memo_na.startswith('PIX QR CODE'):
+        return Lancamento(data_saida, banco, '730', '315', amt, strip_accents(memo), t)
 
     if banco == '551' and is_credit and (
         memo.startswith('PIX RECEBIDO') or memo.startswith('TRANSF.RECEBIDA - PIX SICOOB')

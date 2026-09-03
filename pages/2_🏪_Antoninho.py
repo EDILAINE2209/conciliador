@@ -7,7 +7,7 @@ import streamlit as st
 from core.auth import require_password
 from core.antoninho.cadastro import load_cadastro, save_cadastro, registrar_fornecedor, CONTA_PADRAO
 from core.antoninho.generate import processar, gerar_txt_conciliacao, gerar_txt_pendencias, NOMES_REGRA
-from core.antoninho.plano_de_contas import load_fornecedores
+from core.antoninho.plano_de_contas import load_fornecedores, load_clientes
 from core.antoninho.matching import best_account
 
 st.set_page_config(page_title="Antoninho — Conciliação Bancária", page_icon="🏪", layout="wide")
@@ -118,12 +118,15 @@ with tab_gerar:
     ofx_bb = c3.file_uploader("Extrato Banco do Brasil (OFX)", type=["ofx"], key="ofx_bb")
     cap_file = st.file_uploader("Contas a Pagar por Entrada (Excel)", type=["xlsx"], key="cap_file")
     pdc_file = st.file_uploader(
-        "Plano de Contas (Excel) — opcional", type=["xlsx"], key="pdc_file_atn",
-        help="Não é obrigatório para processar o mês. Se enviado, o app usa a lista de "
+        "Plano de Contas (Excel) — opcional, mas recomendado", type=["xlsx"], key="pdc_file_atn",
+        help="Não é obrigatório para processar o mês. Se enviado, o app usa: (1) a lista de "
              "fornecedores do Plano de Contas para SUGERIR uma conta (por similaridade de "
              "nome) para os fornecedores que aparecerem fora do cadastro, na seção "
              "\"Fornecedores para revisar\" abaixo — a conta ainda precisa ser conferida e "
-             "aplicada manualmente, igual já acontece hoje.",
+             "aplicada manualmente, igual já acontece hoje; e (2) a lista de clientes (grupo "
+             "1.1.2.01) para identificar automaticamente a conta do cliente nas transferências "
+             "recebidas do Banco do Brasil (regra 13) — sem o Plano de Contas, essas caem na "
+             "conta genérica 504 (Clientes Diversos).",
     )
 
     processar_disabled = not (ofx_sicoob and ofx_itau and ofx_bb and cap_file)
@@ -139,7 +142,14 @@ with tab_gerar:
             with open(cap_path, "wb") as f:
                 f.write(cap_file.getbuffer())
 
-            result = processar(paths, cap_path, cadastro, mes_ano_str)
+            accounts_clientes = None
+            if pdc_file is not None:
+                try:
+                    accounts_clientes = load_clientes(pdc_file)
+                except Exception as e:
+                    st.error(f"Não consegui ler o grupo de clientes do Plano de Contas enviado: {e}")
+
+            result = processar(paths, cap_path, cadastro, mes_ano_str, accounts_clientes=accounts_clientes)
             st.session_state["antoninho_result"] = result
             st.session_state["antoninho_revisao"] = {}
 
