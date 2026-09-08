@@ -29,6 +29,7 @@ NOMES_REGRA = {
     '255': 'Juros',
     '204': 'BB Rende Fácil (aplicação)',
     '318': 'BB Rende Fácil (resgate)',
+    '226': 'Depósito bloqueado liberado',
     '429': 'Pagamentos a fornecedores',
     '370': 'Demais movimentos',
 }
@@ -39,15 +40,17 @@ def _value_str(v: float) -> str:
 
 
 def processar(ofx_paths: dict, contas_a_pagar_path: str, cadastro: dict, ano_mes: str,
-              accounts_clientes: list | None = None):
+              accounts_clientes: list | None = None, regras_customizadas: list | None = None):
     """ofx_paths: {"551": path_sicoob, "552": path_itau, "8": path_bb}.
     accounts_clientes: lista opcional do grupo 1.1.2.01 do Plano de Contas
     (core.antoninho.plano_de_contas.load_clientes) — só usada na regra 13
-    (transferência recebida do BB); sem ela, essa regra cai na conta padrão
-    504 "Clientes Diversos". Devolve um dict com: lancamentos (bancários,
-    classificados), pendencias (parcelas não encontradas no banco), resumo
-    (contagem/valor por regra) e novos_fornecedores (fids que caíram em 506
-    sem cadastro, para revisão manual antes de gerar o txt definitivo)."""
+    (transferência recebida do BB). regras_customizadas: lista opcional
+    cadastrada pela tela (core.common.regras_customizadas), para tipos de
+    lançamento novos ainda sem regra fixa. Devolve um dict com: lancamentos
+    (bancários, classificados), pendencias (parcelas não encontradas no
+    banco), resumo (contagem/valor por regra) e novos_fornecedores (fids que
+    caíram em 506 sem cadastro, para revisão manual antes de gerar o txt
+    definitivo)."""
     payables = parse_payables_excel(contas_a_pagar_path)
     matcher = PayableMatcher(payables)
 
@@ -59,7 +62,8 @@ def processar(ofx_paths: dict, contas_a_pagar_path: str, cadastro: dict, ano_mes
     lancamentos = []
     novos_fornecedores = {}
     for t in txns:
-        l = classify_txn(t, matcher, cadastro, ano_mes, accounts_clientes=accounts_clientes)
+        l = classify_txn(t, matcher, cadastro, ano_mes, accounts_clientes=accounts_clientes,
+                          regras_customizadas=regras_customizadas)
         if l is None:
             continue
         lancamentos.append(l)

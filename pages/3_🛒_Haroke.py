@@ -6,7 +6,10 @@ import streamlit as st
 
 from core.auth import require_password
 from core.haroke.cadastro import load_overrides, save_overrides, CONTA_PADRAO
-from core.haroke.generate import processar, gerar_txt, NOMES_REGRA
+from core.haroke.generate import processar, gerar_txt, gerar_txt_titulos_sem_pagamento, NOMES_REGRA
+from core.common.regras_customizadas import load_regras, save_regras, regra_vazia, TIPOS_MATCH
+
+EMPRESA_SLUG = "haroke"
 
 st.set_page_config(page_title="Haroke — Conciliação Bancária", page_icon="🛒", layout="wide")
 require_password()
@@ -18,16 +21,17 @@ st.caption(
     "Lê os 2 extratos bancários (Banco do Brasil e Sicoob), o relatório de "
     "Contas a Pagar e o Plano de Contas, acha a conta de cada fornecedor por "
     "similaridade de nome, classifica cada lançamento automaticamente e gera "
-    "o arquivo de importação contábil do mês."
+    "os arquivos de importação contábil do mês."
 )
 
 
 def init_state():
     defaults = {
         "haroke_overrides": load_overrides(),
+        "haroke_regras_custom": load_regras(EMPRESA_SLUG),
         "haroke_result": None,
         "haroke_cnpj": CNPJ_PADRAO,
-        "haroke_ano_mes": "202607",
+        "haroke_ano_mes": "202608",
         "haroke_revisao": {},  # nome do fornecedor -> conta escolhida na revisão
     }
     for k, v in defaults.items():
@@ -37,8 +41,11 @@ def init_state():
 
 init_state()
 overrides = st.session_state["haroke_overrides"]
+regras_custom = st.session_state["haroke_regras_custom"]
 
-tab_gerar, tab_overrides = st.tabs(["Gerar arquivo do mês", "📇 Correções de fornecedor"])
+tab_gerar, tab_overrides, tab_regras = st.tabs(
+    ["Gerar arquivos do mês", "📇 Correções de fornecedor", "🧩 Regras personalizadas"]
+)
 
 # ==========================================================================
 # ABA: CORREÇÕES DE FORNECEDOR
@@ -95,7 +102,73 @@ with tab_overrides:
     )
 
 # ==========================================================================
-# ABA: GERAR ARQUIVO DO MÊS
+# ABA: REGRAS PERSONALIZADAS
+# ==========================================================================
+with tab_regras:
+    st.subheader("Regras personalizadas de classificação")
+    st.caption(
+        "Quando aparece no extrato um tipo de lançamento que nenhuma regra fixa "
+        "do app reconhece, ele cai em **'lançamentos não classificados'** na "
+        "aba 'Gerar arquivos do mês'. Em vez de me pedir para mexer no código "
+        "toda vez, cadastre a regra aqui: próximo mês (e todos os seguintes) "
+        "esse tipo de lançamento já entra sozinho no arquivo, sem precisar "
+        "perguntar de novo. Uma regra fixa (já validada) sempre tem prioridade "
+        "sobre uma regra personalizada com o mesmo texto."
+    )
+    st.caption(
+        "Nos campos **Débito**/**Crédito**, use a palavra **BANCO** para dizer "
+        "\"a conta do banco de onde veio essa transação\" (assim uma regra só "
+        "serve tanto para o BB quanto para o Sicoob) — ou informe direto o "
+        "número de uma conta fixa (ex.: 506)."
+    )
+
+    for i, r in enumerate(regras_custom):
+        with st.container(border=True):
+            c1, c2, c3 = st.columns([3, 1, 1])
+            r["padrao"] = c1.text_input("Texto do memo do banco", value=r.get("padrao", ""), key=f"rc_padrao_{i}")
+            r["tipo_match"] = c2.selectbox(
+                "Tipo", TIPOS_MATCH, index=TIPOS_MATCH.index(r.get("tipo_match", "prefixo")),
+                key=f"rc_tipo_{i}",
+                help="'igual' compara o memo inteiro; 'prefixo' compara o começo; 'contem' aceita em qualquer posição.",
+            )
+            r["banco"] = c3.selectbox(
+                "Banco", ["", "8", "551"], index=["", "8", "551"].index(r.get("banco", "") or ""),
+                format_func=lambda b: {"": "Qualquer", "8": "Banco do Brasil", "551": "Sicoob"}[b],
+                key=f"rc_banco_{i}",
+            )
+            c4, c5, c6, c7 = st.columns([1, 1, 1, 3])
+            r["debito"] = c4.text_input("Débito", value=r.get("debito", "506"), key=f"rc_debito_{i}")
+            r["credito"] = c5.text_input("Crédito", value=r.get("credito", "BANCO"), key=f"rc_credito_{i}")
+            r["historico"] = c6.text_input("Histórico", value=r.get("historico", "429"), key=f"rc_historico_{i}")
+            r["descricao"] = c7.text_input("Descrição (lembrete)", value=r.get("descricao", ""), key=f"rc_desc_{i}")
+            if st.button("🗑️ Remover esta regra", key=f"rc_rm_{i}"):
+                regras_custom.pop(i)
+                st.rerun()
+
+    if st.button("➕ Adicionar regra personalizada"):
+        regras_custom.append(regra_vazia())
+        st.rerun()
+
+    if st.button("💾 Salvar regras personalizadas", type="primary"):
+        save_regras(regras_custom, EMPRESA_SLUG)
+        st.success("Regras personalizadas salvas.")
+
+    st.divider()
+    st.caption(
+        "⚠️ O botão acima só salva aqui dentro do app rodando agora — mesma "
+        "limitação das correções de fornecedor. Para deixar permanente, baixe "
+        "o arquivo abaixo e suba no GitHub, substituindo "
+        "**haroke_regras_customizadas_seed.json**."
+    )
+    st.download_button(
+        "⬇️ Baixar regras personalizadas (para subir no GitHub)",
+        data=json.dumps(regras_custom, ensure_ascii=False, indent=1).encode("utf-8"),
+        file_name="haroke_regras_customizadas_seed.json",
+        mime="application/json",
+    )
+
+# ==========================================================================
+# ABA: GERAR ARQUIVOS DO MÊS
 # ==========================================================================
 with tab_gerar:
     st.subheader("1. Arquivos do mês")
@@ -125,7 +198,8 @@ with tab_gerar:
                     f.write(up.getbuffer())
                 paths[nome] = p
 
-            result = processar(paths["bb"], paths["sicoob"], paths["cap"], paths["pdc"], overrides, mes_ano_str)
+            result = processar(paths["bb"], paths["sicoob"], paths["cap"], paths["pdc"], overrides,
+                                mes_ano_str, regras_customizadas=regras_custom)
             st.session_state["haroke_result"] = result
             st.session_state["haroke_revisao"] = {}
 
@@ -151,8 +225,8 @@ with tab_gerar:
     if result["unclassified"]:
         st.error(
             f"{len(result['unclassified'])} lançamento(s) do extrato não se encaixaram em nenhuma "
-            "regra conhecida — é um tipo de movimento novo. Confira a lista abaixo antes de "
-            "importar o arquivo; será preciso decidir a regra e avisar para ela ser incluída no app."
+            "regra conhecida (fixa ou personalizada) — é um tipo de movimento novo. Confira a lista "
+            "abaixo e cadastre uma regra na aba **🧩 Regras personalizadas** antes de importar o arquivo."
         )
         for u in result["unclassified"]:
             st.write(f"`{u['banco']}` {u['date']} R$ {u['amt']:.2f} — {u['memo']}")
@@ -183,13 +257,45 @@ with tab_gerar:
     else:
         st.success("Todos os fornecedores encontrados tiveram alta confiança na conta sugerida.")
 
-    st.subheader("4. Baixar arquivo")
+    st.subheader("4. Títulos do Contas a Pagar sem pagamento localizado")
+    titulos = result["titulos_sem_pagamento"]
+    ignorados = result["titulos_antoninho_ignorados"]
+    if titulos:
+        total_titulos = sum(t["valor"] for t in titulos)
+        st.warning(
+            f"{len(titulos)} título(s) venceram neste período mas não foram encontrados em nenhum "
+            f"extrato (nem com tolerância de 3 dias) — R$ {total_titulos:,.2f}".replace(",", "§").replace(".", ",").replace("§", ".") +
+            ". Entram no 2º arquivo abaixo (debito=fornecedor, credito=5, historico=429), para virar "
+            "o banco de verdade quando aparecerem pagos num mês seguinte."
+        )
+        for t in titulos:
+            st.write(f"{t['date']} — {t['complemento']} — R$ {t['valor']:,.2f}".replace(",", "§").replace(".", ",").replace("§", "."))
+    else:
+        st.success("Todos os títulos do período foram encontrados em algum dos dois extratos.")
+    if ignorados:
+        st.caption(
+            f"ℹ️ {len(ignorados)} título(s) da Antoninho Atacado e Varejo (fornecedor) foram "
+            "ignorados de propósito nesta lista — ela é paga por PIX em lote que raramente bate "
+            "com um título isolado (ver regra 'PIX para Antoninho Atacado e Varejo' acima)."
+        )
+
+    st.subheader("5. Baixar arquivos")
     cnpj = st.session_state["haroke_cnpj"]
     txt_conciliacao = gerar_txt(result["entries"], cnpj)
-    nome_arquivo = st.text_input(
-        "Nome do arquivo", value=f"Conciliacao_Haroke_{mes_ano_str[4:6]}{mes_ano_str[0:4]}.txt",
+    txt_titulos = gerar_txt_titulos_sem_pagamento(titulos, cnpj)
+    nome_conciliacao = st.text_input(
+        "Nome do arquivo de conciliação", value=f"Conciliacao_Haroke_{mes_ano_str[4:6]}{mes_ano_str[0:4]}.txt",
     )
-    st.download_button(
+    nome_titulos = st.text_input(
+        "Nome do arquivo de títulos sem pagamento",
+        value=f"Conciliacao_Haroke_{mes_ano_str[4:6]}{mes_ano_str[0:4]}_TitulosSemPagamento.txt",
+    )
+    dcol1, dcol2 = st.columns(2)
+    dcol1.download_button(
         "⬇️ Baixar conciliação bancária", data=txt_conciliacao.encode("utf-8"),
-        file_name=nome_arquivo, mime="text/plain", type="primary",
+        file_name=nome_conciliacao, mime="text/plain", type="primary",
+    )
+    dcol2.download_button(
+        "⬇️ Baixar títulos sem pagamento", data=txt_titulos.encode("utf-8"),
+        file_name=nome_titulos, mime="text/plain",
     )

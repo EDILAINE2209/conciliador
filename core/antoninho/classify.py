@@ -13,7 +13,10 @@ adivinhados.
 
 Regras (nesta ordem de prioridade):
   0. Exclusões: saldo informativo do Itaú ("SALDO..."), depósito em cheque
-     bloqueado/liberado do Sicoob (não são fatos financeiros novos).
+     bloqueado do Sicoob (ainda indisponível — não é fato financeiro novo).
+  0b. Liberação de depósito em cheque bloqueado do Sicoob (fixado ago/2026,
+     copiado da mesma regra da Haroke): antes era ignorada como o bloqueio;
+     agora vira lançamento -> debito=banco  credito=5    hist=226
   1. Seguros (qualquer banco, memo com "SEG")
                                              -> debito=358     credito=banco hist=330
   2. Rendimentos de aplicação (qualquer banco, memo com "RENDIMENTO")
@@ -33,7 +36,9 @@ Regras (nesta ordem de prioridade):
   10. BB Rende Fácil (aplicação/resgate)     -> 11<->8          hist=204/318
   11. Boleto/fornecedor pago (débito)        -> debito=conta do fornecedor (cadastro)
                                                  credito=banco  hist=429
-  12. Tudo o mais (depósitos, devoluções,
+  12. Regra personalizada (cadastrada na tela, core.common.regras_customizadas)
+                                             -> só entra em jogo se nenhuma regra acima reconhecer o memo
+  13. Tudo o mais (depósitos, devoluções,
       transferências não identificadas)      -> conta 506 do lado que não é banco
                                                  hist=370
 """
@@ -44,6 +49,7 @@ from datetime import datetime, timedelta
 from itertools import combinations
 
 from core.antoninho.cadastro import get_conta
+from core.common.regras_customizadas import encontrar_regra, resolver_conta
 
 BANCOS = {"551", "552", "8"}
 
@@ -53,7 +59,8 @@ BOLETO_MEMO_PREFIXES = (
 )
 
 ITAU_SALDO_PREFIX = 'SALDO'
-SICOOB_BLOQ_PREFIXES = ('DEP.CHEQUE BLOQ', 'LIBERA')
+SICOOB_BLOQ_PREFIX = 'DEP.CHEQUE BLOQ'    # bloqueio: ainda ignorado totalmente
+SICOOB_BLOQ_LIBERA_PREFIX = 'LIBERA'      # liberação: vira lançamento (fixado ago/2026)
 
 CONTA_CLIENTE_PADRAO = "504"  # Clientes Diversos (grupo 1.1.2.01) — mesma lógica do 506 p/ fornecedores
 CLIENTE_MATCH_SCORE_MIN = 0.5  # abaixo disso, usa a conta padrão em vez de arriscar um match ruim
@@ -135,25 +142,32 @@ def get_conta_cliente(nome_fragmento: str, accounts_clientes: list | None):
     return conta, nome_conta, score
 
 
-def classify_txn(t, matcher: PayableMatcher, cadastro: dict, ano_mes: str, accounts_clientes: list | None = None):
+def classify_txn(t, matcher: PayableMatcher, cadastro: dict, ano_mes: str, accounts_clientes: list | None = None,
+                  regras_customizadas: list | None = None):
     """t: Txn (core.antoninho.ofx_parse.Txn). ano_mes: 'AAAAMM' do período
     sendo processado (transações fora dele são ignoradas). accounts_clientes:
     lista opcional do grupo 1.1.2.01 do Plano de Contas (ver
     core.antoninho.plano_de_contas.load_clientes), usada só na regra 13
-    (transferência recebida do BB). Devolve um Lancamento ou None (excluído
-    / fora do período)."""
+    (transferência recebida do BB). regras_customizadas: lista opcional
+    cadastrada pela tela (core.common.regras_customizadas) — só é consultada
+    quando NENHUMA regra fixa abaixo reconhece o memo. Devolve um Lancamento
+    ou None (excluído / fora do período)."""
     memo, banco, amt, nome, date = t.memo, t.banco, t.amt, t.name, t.date
 
     if banco == '552' and memo.upper().startswith(ITAU_SALDO_PREFIX):
         return None
-    if banco == '551' and memo.startswith(SICOOB_BLOQ_PREFIXES):
-        return None
+    if banco == '551' and memo.startswith(SICOOB_BLOQ_PREFIX):
+        return None  # depósito bloqueado (ainda indisponível): ignorar totalmente
     if date[:6] != ano_mes:
         return None
 
     is_credit = amt > 0
     data_saida = _ddmmaaaa(date)
     memo_na = strip_accents(memo).upper()  # sem acento, maiúsculo — p/ casar prefixos com segurança
+
+    if banco == '551' and memo.startswith(SICOOB_BLOQ_LIBERA_PREFIX):
+        # liberação de depósito em cheque bloqueado (fixado ago/2026)
+        return Lancamento(data_saida, banco, '5', '226', amt, strip_accents(memo), t)
 
     if 'SEG' in memo_na:
         return Lancamento(data_saida, '358', banco, '330', -amt, strip_accents(memo), t)
@@ -210,6 +224,16 @@ def classify_txn(t, matcher: PayableMatcher, cadastro: dict, ano_mes: str, accou
         complemento = f"{fid} - {nome_fornecedor}" if fid else (nome_fornecedor or '(fornecedor não identificado)')
         return Lancamento(data_saida, conta, banco, '429', abs_amt, strip_accents(complemento), t,
                            fornecedor_novo=not achou)
+
+    # regra personalizada (cadastrada na tela) — só entra em jogo se
+    # nenhuma regra fixa acima reconheceu o memo
+    if regras_customizadas:
+        regra = encontrar_regra(memo, banco, regras_customizadas)
+        if regra is not None:
+            debito = resolver_conta(regra.get('debito', 'BANCO'), banco)
+            credito = resolver_conta(regra.get('credito', 'BANCO'), banco)
+            return Lancamento(data_saida, debito, credito, regra.get('historico', '429'),
+                               abs(amt), strip_accents(memo), t)
 
     # catch-all: "demais movimentos"
     if is_credit:

@@ -10,11 +10,18 @@ pedir a inclusão de empresas novas:
   (Sicoob, Itaú, Banco do Brasil) com o Contas a Pagar e gera dois
   `.txt`: a conciliação bancária do mês e as pendências do Contas a
   Pagar. Também aceita, opcionalmente, o Plano de Contas para sugerir
-  conta de fornecedores novos por similaridade de nome.
+  conta de fornecedores novos por similaridade de nome. Tem uma aba de
+  **regras personalizadas** para cadastrar, pela tela, um tratamento
+  mais específico para um tipo de lançamento que hoje cai em "demais
+  movimentos" — sem precisar mexer em código.
 - **Haroke Supermercado** — concilia os 2 extratos bancários (Banco do
   Brasil, Sicoob) com o Contas a Pagar e o Plano de Contas (a conta de
   cada fornecedor é achada por similaridade de nome, em vez de um
-  cadastro de IDs) e gera um único `.txt` de conciliação bancária.
+  cadastro de IDs) e gera dois `.txt`: a conciliação bancária do mês e
+  os títulos do Contas a Pagar sem pagamento localizado no extrato
+  (mesma ideia da Antoninho). Tem a mesma aba de **regras
+  personalizadas** da Antoninho, para lançamentos novos que ainda não
+  viraram regra fixa.
 - **Borborema Borborema E Cia Ltda** — lê o extrato Bradesco em PDF
   **escaneado** (sem camada de texto — usa OCR, não `pdftotext`) e gera o
   `.txt` de conciliação bancária do mês. Diferente das outras empresas,
@@ -64,9 +71,11 @@ A forma mais simples e gratuita é o **Streamlit Community Cloud**:
 
 1. Suba esta pasta inteira para um repositório no GitHub (pode ser
    privado) — `app.py`, `pages/`, `core/` (com as subpastas
-   `core/antoninho/` e `core/haroke/`), `requirements.txt`,
-   `packages.txt` e os arquivos `antoninho_fornecedores_seed.json` e
-   `haroke_overrides_seed.json`. **Atenção**: se você arrastar os
+   `core/antoninho/`, `core/haroke/` e `core/common/`),
+   `requirements.txt`, `packages.txt` e os arquivos
+   `antoninho_fornecedores_seed.json`, `haroke_overrides_seed.json`,
+   `antoninho_regras_customizadas_seed.json` e
+   `haroke_regras_customizadas_seed.json`. **Atenção**: se você arrastar os
    arquivos pelo navegador em vez de usar `git push`, confira depois se
    as subpastas (`pages/`, `core/`, `core/antoninho/`, `core/haroke/`)
    foram mesmo criadas no GitHub — o upload por arrasta-e-solta às vezes
@@ -153,6 +162,19 @@ manualmente o vínculo `ID do fornecedor -> conta contábil`. Esse cadastro
 foi reconstruído a partir dos arquivos reais de julho/2026 (258
 fornecedores) e cresce sozinho conforme a aba de revisão vai sendo usada.
 
+**Aba "🧩 Regras personalizadas":** cadastre pela tela um tratamento
+específico (débito/crédito/histórico) para um texto de memo do banco que
+hoje cairia em "demais movimentos" (conta 506) — útil quando você quer
+uma conta mais específica para algo recorrente, sem precisar pedir uma
+alteração de código. Uma regra fixa do motor sempre tem prioridade sobre
+uma regra personalizada com o mesmo texto. Ver a seção "Regras
+personalizadas (Antoninho e Haroke)" mais abaixo para o formato completo.
+
+**Liberação de depósito bloqueado (Sicoob)** — fixado em ago/2026: o
+bloqueio em si continua sendo ignorado (ainda não é dinheiro disponível),
+mas a liberação agora vira lançamento (`banco / 5 / histórico 226`) em vez
+de também ser ignorada como antes.
+
 ### Precisão e limitações conhecidas
 
 O motor de classificação foi validado linha a linha contra os dois
@@ -176,15 +198,23 @@ no sistema contábil — exatamente como já era feito manualmente.
 2. Envie os 2 extratos (Banco do Brasil e Sicoob, `.ofx`), o relatório
    de Contas a Pagar (Excel) e o Plano de Contas (Excel) do mês.
 3. Clique em **Processar**. O app classifica cada transação bancária em
-   uma de 12 categorias e casa cada pagamento com a parcela
-   correspondente do Contas a Pagar; a conta do fornecedor é achada
+   uma das categorias fixas (ver Regras_Conciliacao_Haroke.md) e casa
+   cada pagamento com a parcela correspondente do Contas a Pagar —
+   valor **exatamente igual** e data até 3 dias de diferença do
+   vencimento (fixado ago/2026); a conta do fornecedor é achada
    comparando o nome dele com os nomes do Plano de Contas (similaridade
    de texto), não por um cadastro de IDs como na Antoninho.
 4. Confira **"Fornecedores para revisar"**: são parcelas cujo match de
    nome ficou com confiança abaixo de 95% — o app já mostra a conta
    sugerida e o score. Informe a conta certa ali mesmo — isso salva uma
    correção manual para os próximos meses.
-5. Baixe o arquivo de conciliação bancária do mês.
+5. Confira **"Títulos do Contas a Pagar sem pagamento localizado"**:
+   parcelas que venceram no período mas não foram encontradas em nenhum
+   dos 2 extratos (nem com a tolerância de 3 dias) — exceto as da
+   Antoninho Atacado e Varejo (fornecedor), ignoradas de propósito por
+   ser paga em lote (ver regra "PIX para Antoninho Atacado e Varejo").
+6. Baixe os dois arquivos: a **conciliação bancária** e os **títulos sem
+   pagamento** (mesma ideia das "pendências" da Antoninho).
 
 **Aba "📇 Correções de fornecedor":** lista e permite editar/adicionar
 manualmente as correções de nome que têm prioridade sobre a comparação
@@ -193,16 +223,52 @@ Contas a Pagar diverge do plano, ou quando o fornecedor ainda não tem
 conta própria (cai em 506, Fornecedores Diversos, até uma conta ser
 criada).
 
+**Aba "🧩 Regras personalizadas":** mesma ideia e mesmo formato da aba
+equivalente na Antoninho (ver acima) — aqui, como o motor da Haroke tem
+uma lista de "lançamentos não classificados" de verdade (ao contrário da
+Antoninho, que sempre cai num catch-all), cadastrar uma regra aqui é o
+jeito de fazer esses lançamentos pararem de aparecer como pendência sem
+precisar pedir uma alteração de código.
+
+### Regras personalizadas (Antoninho e Haroke)
+
+Formato de cada regra, salva em `<empresa>_regras_customizadas.json`
+(gerado automaticamente; o ponto de partida versionado é
+`<empresa>_regras_customizadas_seed.json`):
+
+```json
+{
+  "padrao": "texto a comparar com o memo do banco",
+  "tipo_match": "igual | prefixo | contem",
+  "banco": "8 | 551 | 552 | \"\" (vazio = qualquer banco)",
+  "debito": "conta, ou a palavra especial BANCO",
+  "credito": "conta, ou a palavra especial BANCO",
+  "historico": "código do histórico",
+  "descricao": "lembrete livre"
+}
+```
+
+"BANCO" em débito/crédito significa "a conta do banco de onde veio essa
+transação" — assim uma regra só serve tanto para o BB quanto para o
+Sicoob (ou o banco que for) sem precisar cadastrar duas vezes. As regras
+são checadas na ordem cadastrada e só depois de **todas** as regras
+fixas — uma regra fixa sempre vence uma regra personalizada com o mesmo
+texto.
+
 ### Precisão e limitações conhecidas
 
 O motor de classificação foi validado linha a linha contra o arquivo de
-referência de julho/2026 já fechado (945 lançamentos, R$ 445.357,46):
-reprodução byte a byte, incluindo a ordem das linhas e a conta
-encontrada para cada fornecedor. Como a conta do fornecedor aqui vem de
-comparação de texto (em vez de um cadastro fixo de IDs como na
-Antoninho), fornecedores com nomes muito parecidos no Plano de Contas
-podem exigir uma correção manual ocasional — a aba de revisão sinaliza
-exatamente esses casos antes de gerar o `.txt` definitivo.
+referência de julho/2026 já fechado (945 lançamentos, R$ 445.357,46) e
+outra vez contra agosto/2026 (981 lançamentos na conciliação + 35
+títulos sem pagamento, excluindo os 10 da Antoninho): reprodução byte a
+byte, incluindo a ordem das linhas e a conta encontrada para cada
+fornecedor. Como a conta do fornecedor aqui vem de comparação de texto
+(em vez de um cadastro fixo de IDs como na Antoninho), fornecedores com
+nomes muito parecidos no Plano de Contas podem exigir uma correção
+manual ocasional — a aba de revisão sinaliza exatamente esses casos
+antes de gerar o `.txt` definitivo. Ver Regras_Conciliacao_Haroke.md
+(enviado junto com os arquivos da empresa) para o histórico completo de
+cada regra e de cada mudança mês a mês.
 
 ## Página: Borborema Borborema E Cia Ltda
 
@@ -284,7 +350,11 @@ e concentra o código novo numa camada fina de remapeamento — mas **não
 substitui a verificação contra um mês fechado real**: uma empresa nova
 sempre nasce com o cadastro de fornecedor vazio, então tudo cai em
 revisão manual no primeiro mês, e continua marcada como "não verificada"
-na tela até alguém confirmar que bateu.
+na tela até alguém confirmar que bateu. A aba **🧩 Regras personalizadas**
+(Antoninho/Haroke) ainda não está disponível para empresas self-service —
+um lançamento fora do padrão nelas continua caindo em "demais movimentos"
+(506) até virar uma regra fixa ou, futuramente, esse recurso ser
+estendido pra cá também.
 
 ## Página: Empresas
 
@@ -342,9 +412,13 @@ apae_app/
 ├── packages.txt                    # poppler-utils (PDF da APAE/Borborema) + tesseract-ocr (OCR da Borborema)
 ├── antoninho_fornecedores_seed.json  # cadastro inicial de fornecedores (Antoninho)
 ├── haroke_overrides_seed.json      # correções manuais iniciais de fornecedor (Haroke)
+├── antoninho_regras_customizadas_seed.json  # regras personalizadas iniciais (Antoninho; vazio por padrão)
+├── haroke_regras_customizadas_seed.json     # regras personalizadas iniciais (Haroke; vazio por padrão)
 ├── config.json                     # config da APAE (gerado automaticamente)
 ├── antoninho_fornecedores.json     # cadastro vivo de fornecedores (gerado automaticamente)
 ├── haroke_overrides.json           # correções vivas de fornecedor (gerado automaticamente)
+├── antoninho_regras_customizadas.json  # regras personalizadas vivas (gerado automaticamente)
+├── haroke_regras_customizadas.json     # regras personalizadas vivas (gerado automaticamente)
 ├── empresas.json                   # empresas criadas via self-service (gerado automaticamente)
 ├── empresas_data/                  # cadastro/correções de cada empresa self-service (idem)
 ├── assets/
@@ -367,8 +441,11 @@ apae_app/
     ├── common/
     │   ├── plano_de_contas.py      # leitura genérica de fornecedores no Plano de Contas
     │   │                           # (usada pela Antoninho e pela Haroke)
-    │   └── templates.py            # descrição dos modelos "Antoninho"/"Haroke" usada na
-    │                               # página Nova Empresa
+    │   ├── templates.py            # descrição dos modelos "Antoninho"/"Haroke" usada na
+    │   │                           # página Nova Empresa
+    │   └── regras_customizadas.py  # regras de classificação cadastráveis pela tela
+    │                                # (usado pela Antoninho e pela Haroke — ver README,
+    │                                # seção "Regras personalizadas")
     ├── generic/
     │   ├── empresas.py              # empresas.json: criar/listar/atualizar empresas self-service
     │   └── engine.py                # roda a classificação da Antoninho/Haroke sem alterar
@@ -379,14 +456,17 @@ apae_app/
     │   ├── cadastro.py             # cadastro fornecedor -> conta contábil (por ID)
     │   ├── plano_de_contas.py      # reexporta core/common/plano_de_contas.py
     │   ├── matching.py             # sugestão de conta por similaridade de nome (opcional)
-    │   ├── classify.py             # motor de classificação (12 regras)
+    │   ├── classify.py             # motor de classificação (13 regras + regra personalizada)
     │   └── generate.py             # orquestra tudo e gera os 2 .txt
     ├── haroke/
     │   ├── plano_de_contas.py      # reexporta core/common/plano_de_contas.py
     │   ├── cadastro.py             # correções manuais de fornecedor -> conta contábil
     │   ├── matching.py             # acha a conta do fornecedor por similaridade de nome
-    │   ├── classify.py             # motor de classificação (12 regras)
-    │   └── generate.py             # orquestra tudo e gera o .txt (reaproveita
+    │   ├── classify.py             # motor de classificação (16 regras + regra personalizada,
+    │   │                           # cruzamento com tolerância de 3 dias — ver
+    │   │                           # Regras_Conciliacao_Haroke.md)
+    │   └── generate.py             # orquestra tudo e gera os 2 .txt (conciliação +
+    │                                # títulos sem pagamento; reaproveita
     │                                # core/antoninho/ofx_parse.py e payables.py)
     └── borborema/
         ├── ocr_extract.py          # rasteriza o PDF (pdftoppm), OCR por coluna (tesseract)

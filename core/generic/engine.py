@@ -50,6 +50,19 @@ _HAROKE_BUCKET_MAP = {
     'D_cred_liq_cobranca': 'cred_liq_cobranca', 'E_sipag_cielo': 'sipag_cielo',
     'F_tarifas': 'tarifas', 'H_rendefacil_entra': 'rendefacil',
     'I_rendefacil_sai': 'rendefacil', 'J_iof': 'iof', 'M_juros': 'juros',
+    # O_ted_str usa a mesma conta real da Haroke que sipag_cielo (504) —
+    # reaproveita a mesma categoria configurável em vez de criar uma nova
+    # (fixado ago/2026, junto com a regra em core/haroke/classify.py).
+    'O_ted_str': 'sipag_cielo',
+    # P_ted_titularidade usa a mesma conta real da Haroke que o fallback de
+    # fornecedor (506) — mesma lógica do item acima.
+    'P_ted_titularidade': 'fornecedor_fallback',
+    # N_deposito_liberado (conta "5") e Z_customizada (contas escolhidas
+    # pelo próprio usuário na regra personalizada) NÃO entram aqui de
+    # propósito: "5" é a conta transitória universal (nunca remapeada, mesma
+    # convenção já usada em A_conciliados/B_nao_conciliados abaixo e no
+    # remap da Antoninho), e uma regra personalizada já grava a conta que a
+    # empresa quer usar diretamente — remapear por cima seria incorreto.
     # K_antoninho é uma regra específica da Haroke (PIX pra outra empresa da
     # carteira) — não remapeada aqui; na prática nunca deve disparar pra uma
     # empresa nova, já que depende do nome literal "ANTONINHO" no memo/nome.

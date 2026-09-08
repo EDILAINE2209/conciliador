@@ -9,6 +9,9 @@ from core.antoninho.cadastro import load_cadastro, save_cadastro, registrar_forn
 from core.antoninho.generate import processar, gerar_txt_conciliacao, gerar_txt_pendencias, NOMES_REGRA
 from core.antoninho.plano_de_contas import load_fornecedores, load_clientes
 from core.antoninho.matching import best_account
+from core.common.regras_customizadas import load_regras, save_regras, regra_vazia, TIPOS_MATCH
+
+EMPRESA_SLUG = "antoninho"
 
 st.set_page_config(page_title="Antoninho — Conciliação Bancária", page_icon="🏪", layout="wide")
 require_password()
@@ -26,6 +29,7 @@ st.caption(
 def init_state():
     defaults = {
         "antoninho_cadastro": load_cadastro(),
+        "antoninho_regras_custom": load_regras(EMPRESA_SLUG),
         "antoninho_result": None,
         "antoninho_cnpj": CNPJ_PADRAO,
         "antoninho_ano_mes": "202607",
@@ -38,8 +42,11 @@ def init_state():
 
 init_state()
 cadastro = st.session_state["antoninho_cadastro"]
+regras_custom = st.session_state["antoninho_regras_custom"]
 
-tab_gerar, tab_cadastro = st.tabs(["Gerar arquivos do mês", "📇 Cadastro de fornecedores"])
+tab_gerar, tab_cadastro, tab_regras = st.tabs(
+    ["Gerar arquivos do mês", "📇 Cadastro de fornecedores", "🧩 Regras personalizadas"]
+)
 
 # ==========================================================================
 # ABA: CADASTRO DE FORNECEDORES
@@ -100,6 +107,70 @@ with tab_cadastro:
     )
 
 # ==========================================================================
+# ABA: REGRAS PERSONALIZADAS
+# ==========================================================================
+with tab_regras:
+    st.subheader("Regras personalizadas de classificação")
+    st.caption(
+        "Diferente da Haroke, aqui não existe uma lista de 'lançamentos não "
+        "classificados' — a regra 13 ('demais movimentos') já aceita qualquer "
+        "coisa que sobrar. Cadastre uma regra aqui quando quiser que um tipo "
+        "específico de lançamento (que hoje cai em 'demais movimentos', conta "
+        "506) passe a usar uma conta/histórico mais específico, sem precisar "
+        "me pedir para mexer no código."
+    )
+    st.caption(
+        "Nos campos **Débito**/**Crédito**, use a palavra **BANCO** para dizer "
+        "\"a conta do banco de onde veio essa transação\" (serve para Sicoob, "
+        "Itaú e BB de uma vez) — ou informe direto o número de uma conta fixa."
+    )
+
+    for i, r in enumerate(regras_custom):
+        with st.container(border=True):
+            c1, c2, c3 = st.columns([3, 1, 1])
+            r["padrao"] = c1.text_input("Texto do memo do banco", value=r.get("padrao", ""), key=f"arc_padrao_{i}")
+            r["tipo_match"] = c2.selectbox(
+                "Tipo", TIPOS_MATCH, index=TIPOS_MATCH.index(r.get("tipo_match", "prefixo")),
+                key=f"arc_tipo_{i}",
+                help="'igual' compara o memo inteiro; 'prefixo' compara o começo; 'contem' aceita em qualquer posição.",
+            )
+            r["banco"] = c3.selectbox(
+                "Banco", ["", "8", "551", "552"], index=["", "8", "551", "552"].index(r.get("banco", "") or ""),
+                format_func=lambda b: {"": "Qualquer", "8": "Banco do Brasil", "551": "Sicoob", "552": "Itaú"}[b],
+                key=f"arc_banco_{i}",
+            )
+            c4, c5, c6, c7 = st.columns([1, 1, 1, 3])
+            r["debito"] = c4.text_input("Débito", value=r.get("debito", "506"), key=f"arc_debito_{i}")
+            r["credito"] = c5.text_input("Crédito", value=r.get("credito", "BANCO"), key=f"arc_credito_{i}")
+            r["historico"] = c6.text_input("Histórico", value=r.get("historico", "370"), key=f"arc_historico_{i}")
+            r["descricao"] = c7.text_input("Descrição (lembrete)", value=r.get("descricao", ""), key=f"arc_desc_{i}")
+            if st.button("🗑️ Remover esta regra", key=f"arc_rm_{i}"):
+                regras_custom.pop(i)
+                st.rerun()
+
+    if st.button("➕ Adicionar regra personalizada", key="arc_add"):
+        regras_custom.append(regra_vazia())
+        st.rerun()
+
+    if st.button("💾 Salvar regras personalizadas", type="primary", key="arc_save"):
+        save_regras(regras_custom, EMPRESA_SLUG)
+        st.success("Regras personalizadas salvas.")
+
+    st.divider()
+    st.caption(
+        "⚠️ O botão acima só salva aqui dentro do app rodando agora — mesma "
+        "limitação do cadastro de fornecedores. Para deixar permanente, baixe "
+        "o arquivo abaixo e suba no GitHub, substituindo "
+        "**antoninho_regras_customizadas_seed.json**."
+    )
+    st.download_button(
+        "⬇️ Baixar regras personalizadas (para subir no GitHub)",
+        data=json.dumps(regras_custom, ensure_ascii=False, indent=1).encode("utf-8"),
+        file_name="antoninho_regras_customizadas_seed.json",
+        mime="application/json",
+    )
+
+# ==========================================================================
 # ABA: GERAR ARQUIVOS DO MÊS
 # ==========================================================================
 with tab_gerar:
@@ -149,7 +220,8 @@ with tab_gerar:
                 except Exception as e:
                     st.error(f"Não consegui ler o grupo de clientes do Plano de Contas enviado: {e}")
 
-            result = processar(paths, cap_path, cadastro, mes_ano_str, accounts_clientes=accounts_clientes)
+            result = processar(paths, cap_path, cadastro, mes_ano_str, accounts_clientes=accounts_clientes,
+                                regras_customizadas=regras_custom)
             st.session_state["antoninho_result"] = result
             st.session_state["antoninho_revisao"] = {}
 
